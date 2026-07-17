@@ -220,3 +220,6 @@ __marimo__/
 
 #Agents
 .opencode/
+.temp/
+# Agent session/task scratch
+.tmp/

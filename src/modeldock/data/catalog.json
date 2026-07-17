@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "name": "llama3",
+      "aliases": [
+        "llama3",
+        "llama-3",
+        "meta-llama-3"
+      ],
+      "category": "chat",
+      "capabilities": [
+        "chat",
+        "completion"
+      ],
+      "default_tag": "latest",
+      "description": "Meta Llama 3 instruction-tuned chat model.",
+      "variants": [
+        {
+          "tag": "8b",
+          "params": "8B",
+          "size_bytes": 4660000000,
+          "min_ram": "8GB"
+        },
+        {
+          "tag": "70b",
+          "params": "70B",
+          "size_bytes": 40500000000,
+          "min_ram": "64GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "llama3.1",
+      "aliases": [
+        "llama3.1",
+        "llama-3.1"
+      ],
+      "category": "chat",
+      "capabilities": [
+        "chat",
+        "completion",
+        "tool_use"
+      ],
+      "default_tag": "latest",
+      "description": "Meta Llama 3.1 with extended context and tool use.",
+      "variants": [
+        {
+          "tag": "8b",
+          "params": "8B",
+          "size_bytes": 4660000000,
+          "min_ram": "8GB"
+        },
+        {
+          "tag": "70b",
+          "params": "70B",
+          "size_bytes": 40500000000,
+          "min_ram": "64GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "qwen3",
+      "aliases": [
+        "qwen3",
+        "qwen-3"
+      ],
+      "category": "chat",
+      "capabilities": [
+        "chat",
+        "completion",
+        "reasoning"
+      ],
+      "default_tag": "latest",
+      "description": "Alibaba Qwen 3 multilingual chat model with reasoning.",
+      "variants": [
+        {
+          "tag": "8b",
+          "params": "8B",
+          "size_bytes": 5200000000,
+          "min_ram": "8GB"
+        },
+        {
+          "tag": "32b",
+          "params": "32B",
+          "size_bytes": 20000000000,
+          "min_ram": "24GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "deepseek-r1",
+      "aliases": [
+        "deepseek-r1",
+        "deepseekr1"
+      ],
+      "category": "reasoning",
+      "capabilities": [
+        "chat",
+        "completion",
+        "reasoning"
+      ],
+      "default_tag": "latest",
+      "description": "DeepSeek R1 reasoning model for math and code.",
+      "variants": [
+        {
+          "tag": "7b",
+          "params": "7B",
+          "size_bytes": 4600000000,
+          "min_ram": "8GB"
+        },
+        {
+          "tag": "70b",
+          "params": "70B",
+          "size_bytes": 42000000000,
+          "min_ram": "64GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "codellama",
+      "aliases": [
+        "codellama",
+        "code-llama"
+      ],
+      "category": "coding",
+      "capabilities": [
+        "chat",
+        "completion"
+      ],
+      "default_tag": "latest",
+      "description": "Meta Code Llama for code generation and completion.",
+      "variants": [
+        {
+          "tag": "7b",
+          "params": "7B",
+          "size_bytes": 3900000000,
+          "min_ram": "8GB"
+        },
+        {
+          "tag": "34b",
+          "params": "34B",
+          "size_bytes": 19000000000,
+          "min_ram": "24GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "mistral",
+      "aliases": [
+        "mistral",
+        "mistral-7b"
+      ],
+      "category": "chat",
+      "capabilities": [
+        "chat",
+        "completion"
+      ],
+      "default_tag": "latest",
+      "description": "Mistral 7B general-purpose chat model.",
+      "variants": [
+        {
+          "tag": "7b",
+          "params": "7B",
+          "size_bytes": 4100000000,
+          "min_ram": "8GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "gemma3",
+      "aliases": [
+        "gemma3",
+        "gemma-3"
+      ],
+      "category": "chat",
+      "capabilities": [
+        "chat",
+        "completion",
+        "vision"
+      ],
+      "default_tag": "latest",
+      "description": "Google Gemma 3 multimodal chat model with vision.",
+      "variants": [
+        {
+          "tag": "4b",
+          "params": "4B",
+          "size_bytes": 3000000000,
+          "min_ram": "4GB"
+        },
+        {
+          "tag": "27b",
+          "params": "27B",
+          "size_bytes": 17000000000,
+          "min_ram": "16GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "nomic-embed-text",
+      "aliases": [
+        "nomic-embed-text",
+        "nomic-embed"
+      ],
+      "category": "embedding",
+      "capabilities": [
+        "embed"
+      ],
+      "default_tag": "latest",
+      "description": "Nomic text embedding model for retrieval.",
+      "variants": [
+        {
+          "tag": "latest",
+          "params": "137M",
+          "size_bytes": 270000000,
+          "min_ram": "2GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    },
+    {
+      "name": "llava",
+      "aliases": [
+        "llava",
+        "llava-llama3"
+      ],
+      "category": "vision",
+      "capabilities": [
+        "chat",
+        "vision"
+      ],
+      "default_tag": "latest",
+      "description": "LLaVA multimodal model for image understanding.",
+      "variants": [
+        {
+          "tag": "7b",
+          "params": "7B",
+          "size_bytes": 4700000000,
+          "min_ram": "8GB"
+        }
+      ],
+      "backend_hints": [
+        "ollama"
+      ]
+    }
+  ]
+}
