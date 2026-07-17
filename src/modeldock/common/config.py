@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -81,7 +81,8 @@ def _toml_load(path: Path) -> Dict[str, Any]:
     import tomli
 
     with path.open("rb") as fh:
-        return cast(Dict[str, Any], tomli.load(fh))
+        data: Dict[str, Any] = tomli.load(fh)
+        return data
 
 
 def _coerce_log_level(value: Any) -> str:

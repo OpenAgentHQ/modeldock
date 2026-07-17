@@ -1,0 +1,95 @@
+name: Congratulate on Merge
+
+# Automatically posts a congratulatory comment on merged Pull Requests.
+#
+# Features:
+#   - First-contribution detection via GitHub API
+#   - Label-based enhancements (first contribution, good first issue)
+#   - Bot author filtering (skips automated accounts)
+#   - Structured logging for audit trail
+#
+# Trigger: pull_request_target → closed (only merged PRs targeting main)
+# Permissions: pull-requests: write, contents: read (least privilege)
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  congratulate:
+    name: Congratulate contributor
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log event
+        run: |
+          echo "PR #${{ github.event.pull_request.number }} merged by ${{ github.event.pull_request.user.login }}"
+          echo "Title: ${{ github.event.pull_request.title }}"
+
+      - name: Skip bots
+        id: check
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          if [ "$AUTHOR_TYPE" = "Bot" ]; then
+            echo "Author $AUTHOR is a bot — skipping congratulations."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect first contribution
+        if: steps.check.outputs.skip == 'false'
+        id: first
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+        run: |
+          COUNT=$(gh api "repos/$REPO/pulls?state=all&creator=$AUTHOR" \
+            --jq 'length')
+          echo "Total PRs by $AUTHOR (incl. this one): $COUNT"
+          if [ "$COUNT" -le 1 ]; then
+            echo "first=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "first=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add labels
+        if: steps.check.outputs.skip == 'false' && steps.first.outputs.first == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr edit "$PR" --add-label "first contribution"
+          echo "Labeled PR #$PR as 'first contribution'."
+
+      - name: Post congratulatory comment
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          FIRST: ${{ steps.first.outputs.first }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$FIRST" = "true" ]; then
+            BODY=":tada: @$AUTHOR — congratulations on your **first contribution** to ModelDock! :tada
+
+          Your PR has been merged. We're thrilled to have you in the community — thank you for helping make local AI model management better for everyone.
+
+          If you're looking for what to tackle next, check out issues labeled \`good first issue\`."
+          else
+            BODY=":tada: Thanks @$AUTHOR — your PR has been merged! :tada
+
+          Appreciate the contribution to ModelDock. If you spot anything else to improve, we'd love another PR."
+          fi
+          gh pr comment "$PR" --body "$BODY"
+          echo "Posted congratulatory comment to PR #$PR."

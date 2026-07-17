@@ -87,9 +87,7 @@ def test_sdk_remove_via_fake_manager() -> None:
     from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
 
     runtime = FakeRuntime()
-    mgr = md.ModelManager(
-        runtime=runtime, registry=FakeRegistry(), cache=FakeCache()
-    )
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
     mgr.install("llama3")
     mgr.remove("llama3")
     assert not mgr.verify("llama3")
@@ -99,9 +97,7 @@ def test_sdk_load_via_fake_manager() -> None:
     from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
 
     runtime = FakeRuntime()
-    mgr = md.ModelManager(
-        runtime=runtime, registry=FakeRegistry(), cache=FakeCache()
-    )
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
     client = mgr.load("llama3", auto_install=True)
     assert client == {"client": "llama3:latest"}
 
