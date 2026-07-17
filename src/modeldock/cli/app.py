@@ -21,6 +21,10 @@ from modeldock.cli.commands.search import search_cmd
 from modeldock.cli.commands.update import update_cmd
 from modeldock.common.logging import configure_logging
 
+# Allowed log levels surfaced to the user via --help and validated in the CLI
+# layer before any value reaches common/logging.configure_logging().
+_VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
 app = typer.Typer(
     name="modeldock",
     help="ModelDock — the package manager for local AI models.",
@@ -49,6 +53,22 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _resolve_log_level(log_level: object) -> str:
+    """Coerce the Typer option value to a valid level string for common/.
+
+    Typer binds the resolved CLI value here, so ``log_level`` is normally a
+    ``str``. If anything else (e.g. an ``OptionInfo`` descriptor from a direct
+    call) leaks in, we normalize it to ``INFO`` at the CLI boundary so a
+    framework object never propagates into ``common/``.
+    """
+    if not isinstance(log_level, str):
+        return "INFO"
+    normalized = log_level.strip().upper()
+    if normalized not in _VALID_LOG_LEVELS:
+        return "INFO"
+    return normalized
+
+
 @app.callback()
 def main(
     backend: str = typer.Option(None, "--backend", help="Runtime backend"),
@@ -59,7 +79,7 @@ def main(
     ),
 ) -> None:
     """Global options applied before any subcommand."""
-    configure_logging(level=log_level)
+    configure_logging(level=_resolve_log_level(log_level))
     if no_progress:
         import os
 
