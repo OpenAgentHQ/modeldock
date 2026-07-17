@@ -35,10 +35,12 @@ def test_cli_default_invocation_sets_error_level() -> None:
 
 
 def test_cli_no_arguments_shows_help() -> None:
-    # `no_args_is_help` means bare invocation prints help (exit 2), proving the
-    # callback ran and resolved options without an OptionInfo leaking through.
+    # `no_args_is_help` means bare invocation prints help. The exact exit code
+    # differs across Typer/Click versions (0 or 2), so we assert the callback
+    # ran and resolved options without an OptionInfo leaking through, and that
+    # help text is present.
     result = runner.invoke(app, [])
-    assert result.exit_code == 2
+    assert result.exit_code in (0, 2)
     assert "modeldock" in result.output.lower()
 
 
