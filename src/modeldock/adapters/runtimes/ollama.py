@@ -57,9 +57,7 @@ class OllamaRuntime(BaseRuntime):
                 hint="Install the SDK with `pip install modeldock[ollama]`.",
             ) from exc
         try:
-            self._client = ollama.Client(
-                host=self._resolve_host(), timeout=_CLIENT_TIMEOUT_SECONDS
-            )
+            self._client = ollama.Client(host=self._resolve_host(), timeout=_CLIENT_TIMEOUT_SECONDS)
         except Exception as exc:  # pragma: no cover - defensive
             raise RuntimeUnavailableError(
                 "ollama",
@@ -172,9 +170,7 @@ class OllamaRuntime(BaseRuntime):
             if self.is_installed(ref):
                 if progress is not None:
                     progress.finish(desc=f"Pulled {ref.qualified_name()}")
-                return PullResult(
-                    ref=ref, success=True, bytes_downloaded=total_bytes
-                )
+                return PullResult(ref=ref, success=True, bytes_downloaded=total_bytes)
             time.sleep(_PULL_VERIFY_BACKOFF_SECONDS)
         if progress is not None:
             progress.finish(desc=f"Pull failed: {ref.qualified_name()}")

@@ -24,6 +24,7 @@ class _PullClient:
     def pull(self, name: str, stream: bool = False) -> Any:
         self.pull_calls.append(name)
         if stream:
+
             def _gen() -> Iterator[dict[str, Any]]:
                 yield {"status": "pulling", "completed": 50, "total": 100}
                 yield {"status": "success", "completed": 100, "total": 100}
@@ -106,9 +107,7 @@ def test_pull_streams_progress_and_accounts_bytes(monkeypatch: Any) -> None:
 
 
 def test_list_installed_parses_model_field() -> None:
-    client = _PullClient(
-        [{"models": [{"model": "llama3:latest"}, {"model": "qwen3:8b"}]}]
-    )
+    client = _PullClient([{"models": [{"model": "llama3:latest"}, {"model": "qwen3:8b"}]}])
     runtime = _runtime_with(client)
 
     refs = runtime.list_installed()
