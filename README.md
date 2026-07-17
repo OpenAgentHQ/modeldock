@@ -1,14 +1,28 @@
-# ModelDock
+<p align="center">
+  <img src="docs/images/modeldock.png" alt="ModelDock" width="420">
+</p>
 
-> The lightweight, Python-first **model manager for local AI models** — the package manager for local LLMs.
+<h1 align="center">ModelDock</h1>
 
-[![CI](https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml/badge.svg)](https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml)
-[![CodeQL](https://github.com/OpenAgentHQ/modeldock/actions/workflows/codeql.yml/badge.svg)](https://github.com/OpenAgentHQ/modeldock/actions/workflows/codeql.yml)
-[![Coverage](https://codecov.io/gh/OpenAgentHQ/modeldock/branch/main/graph/badge.svg)](https://codecov.io/gh/OpenAgentHQ/modeldock)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org)
-[![PyPI version](https://img.shields.io/pypi/v/modeldock.svg)](https://pypi.org/project/modeldock/)
-[![Downloads](https://img.shields.io/pypi/dm/modeldock.svg)](https://pypi.org/project/modeldock/)
+<p align="center">
+  The lightweight, Python-first <strong>model manager for local AI models</strong> — the package manager for local LLMs.
+</p>
+
+<p align="center">
+  <a href="https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml"><img src="https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml"><img src="https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml/badge.svg?event=push&name=Analyze%20(CodeQL)" alt="CodeQL"></a>
+  <a href="https://codecov.io/gh/OpenAgentHQ/modeldock"><img src="https://codecov.io/gh/OpenAgentHQ/modeldock/branch/main/graph/badge.svg" alt="Coverage"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/pulls"><img src="https://img.shields.io/github/issues-pr/OpenAgentHQ/modeldock" alt="PRs"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/network/members"><img src="https://img.shields.io/github/forks/OpenAgentHQ/modeldock" alt="Forks"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/stargazers"><img src="https://img.shields.io/github/stars/OpenAgentHQ/modeldock" alt="Stars"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/graphs/contributors"><img src="https://img.shields.io/github/contributors/OpenAgentHQ/modeldock" alt="Contributors"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python"></a>
+  <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/v/modeldock.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/dm/modeldock.svg" alt="Downloads"></a>
+</p>
+
+---
 
 ModelDock discovers, downloads, caches, verifies, and loads local LLMs through
 pluggable runtime adapters. It does **not** run inference itself; it orchestrates
@@ -147,7 +161,7 @@ progress_style  = "rich"
 ## Documentation
 
 | File | Purpose |
-|---|---|
+|------|---------|
 | [PROJECT.MD](PROJECT.MD) | Product vision, pain points, roadmap |
 | [Architecture.md](Architecture.md) | Design contract |
 | [AGENT.md](AGENT.md) | Agent/contributor rules + coding standards |
