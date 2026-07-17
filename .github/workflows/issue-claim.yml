@@ -1,0 +1,115 @@
+name: Issue Claim
+
+# Lets contributors claim issues with a comment command so they get assigned
+# and the issue is marked "claimed" (removing "help wanted" / "good first issue").
+#
+# Commands (as an issue comment):
+#   /claim            Assign yourself to the issue (fails if already claimed by someone else)
+#   /claim force      Take over an issue already claimed by another user
+#   /unclaim          Release your claim (unassign yourself, restore help-wanted labels)
+#
+# Trigger: issue_comment (created) + issues (reopened/unassigned)
+# Permissions: issues: write, contents: read (least privilege)
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [reopened, unassigned]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  claim:
+    name: Handle claim command
+    if: >-
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log event
+        env:
+          AUTHOR: ${{ github.event.comment.user.login }}
+          ISSUE: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          echo "Comment by $AUTHOR on issue #$ISSUE"
+          echo "Command: $BODY"
+
+      - name: Skip bots
+        id: check
+        env:
+          AUTHOR_TYPE: ${{ github.event.comment.user.type }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          if [ "$AUTHOR_TYPE" = "Bot" ]; then
+            echo "Author $AUTHOR is a bot — ignoring."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve command
+        if: steps.check.outputs.skip == 'false'
+        id: cmd
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          FIRST=$(echo "$BODY" | tr -d '\r' | head -n1 | awk '{print $1}')
+          ARG=$(echo "$BODY" | tr -d '\r' | head -n1 | awk '{print $2}')
+          echo "command=$FIRST" >> "$GITHUB_OUTPUT"
+          echo "arg=$ARG" >> "$GITHUB_OUTPUT"
+
+      - name: Get current assignees
+        if: steps.check.outputs.skip == 'false'
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          ASSIGNEES=$(gh api "repos/$REPO/issues/$ISSUE/assignees" --jq '.[].login' | tr '\n' ',' )
+          echo "assignees=$ASSIGNEES" >> "$GITHUB_OUTPUT"
+          echo "Current assignees: $ASSIGNEES"
+
+      - name: Claim issue
+        if: >-
+          steps.check.outputs.skip == 'false' &&
+          steps.cmd.outputs.command == '/claim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+          ARG: ${{ steps.cmd.outputs.arg }}
+          ASSIGNEES: ${{ steps.state.outputs.assignees }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$ASSIGNEES" ] && [ "$ASSIGNEES" != "$AUTHOR," ]; then
+            if [ "$ARG" != "force" ]; then
+              gh issue comment "$ISSUE" --body ":warning: @$AUTHOR — issue #$ISSUE is already claimed by \`${ASSIGNEES%,}\`. Use \`/claim force\` to take over, or \`/unclaim\` to release it first."
+              echo "Already claimed; aborting (no force)."
+              exit 0
+            fi
+          fi
+          gh issue edit "$ISSUE" --add-assignee "$AUTHOR"
+          gh issue edit "$ISSUE" --remove-label "help wanted" || true
+          gh issue edit "$ISSUE" --remove-label "good first issue" || true
+          gh issue comment "$ISSUE" --body ":white_check_mark: @$AUTHOR claimed issue #$ISSUE. Thanks! Linked a draft PR with \`Closes #$ISSUE\` to get started."
+          echo "Claimed issue #$ISSUE for $AUTHOR."
+
+      - name: Unclaim issue
+        if: >-
+          steps.check.outputs.skip == 'false' &&
+          steps.cmd.outputs.command == '/unclaim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh issue edit "$ISSUE" --remove-assignee "$AUTHOR"
+          gh issue comment "$ISSUE" --body ":wave: @$AUTHOR released claim on issue #$ISSUE. It's up for grabs again — labels restored."
+          echo "Unclaimed issue #$ISSUE by $AUTHOR."
