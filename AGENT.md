@@ -43,10 +43,16 @@ before writing any code.
 5. **No heavy ML deps.** Do not add torch/transformers/etc. ModelDock manages
    models; it does not infer. Runtime-native SDKs (e.g. `ollama`) are optional
    extras only.
-6. **Library-friendly logging.** Never call `logging.basicConfig()` at import
-   time. Use the `modeldock.*` named logger; configure only in CLI/entry points.
-7. **Typed errors, never silent swallows.** Raise `ModelDockError` subclasses
-   (see `common/errors.py`). Every error must carry actionable context.
+ 6. **Library-friendly logging.** Never call `logging.basicConfig()` at import
+    time. Use the `modeldock.*` named logger; configure only in CLI/entry points.
+ 7. **No framework objects cross the CLI boundary.** Typer option descriptors
+    (e.g. `OptionInfo`) and other CLI-framework objects must never reach
+    `common/`, `core/`, `domain/`, or `ports/`. The CLI callback resolves and
+    validates every option to a plain value *before* calling any downstream
+    function. `configure_logging()` additionally falls back to `INFO` on a
+    non-string or invalid level so a bad value can never crash bootstrap.
+ 8. **Typed errors, never silent swallows.** Raise `ModelDockError` subclasses
+    (see `common/errors.py`). Every error must carry actionable context.
  8. **Cross-platform by default.** Use `platformdirs` for paths, avoid
     hardcoded `/` or `C:\`, avoid OS-specific syscalls without guards.
 
@@ -64,7 +70,9 @@ before writing any code.
 - **No global variables.** Pass dependencies via constructors/parameters
   (Dependency Inversion) — never module-level mutable state.
 - **No business logic in CLI.** `modeldock/cli/` is a thin delivery layer that
-  translates argv → `core` service calls only.
+  translates argv → `core` service calls only. It also resolves and validates
+  every CLI option to a plain value *before* any downstream call, so framework
+  objects (e.g. Typer `OptionInfo`) never reach `common/`/`core/`/`domain/`.
 - **Communicate through interfaces.** Code against `ports/` protocols, never
   concrete adapters.
 
@@ -108,6 +116,9 @@ before writing any code.
 4. **NEVER assume features not in `PROJECT.MD`.** Build only what is specified.
 5. **ALWAYS communicate through interfaces** (`ports/`), not concrete adapters.
 6. **NEVER develop on `main`** — always create a PR for review.
+7. **NEVER let CLI-framework objects cross into `common/`/`core`/`domain`.**
+   The CLI must resolve and validate every option to a plain value before any
+   downstream call; `configure_logging()` falls back to `INFO` on bad input.
 
 ---
 

@@ -409,6 +409,15 @@ A **searchable, versioned catalog** decoupled from any runtime.
   go to logs.
 - **Sensitive data:** never log model contents, tokens, or secrets; only
   metadata (names, sizes, statuses).
+- **CLI boundary (hard rule):** the CLI is the *only* place that resolves and
+  validates user-supplied options. Typer option descriptors (e.g. `OptionInfo`)
+  and other framework objects **must never cross into `common/`**. The CLI
+  callback must coerce/validate every option to a plain value (string/int/bool)
+  *before* calling `configure_logging()` or any `common.*` function. As a
+  defensive backstop, `configure_logging()` itself normalizes the `level`
+  argument: a non-string or unrecognized level falls back to `INFO` rather than
+  crashing. This keeps `common/` free of CLI-framework coupling and makes the
+  logging bootstrap robust to direct/test invocation.
 
 ---
 
