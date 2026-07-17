@@ -163,7 +163,10 @@ Rules for all generated GitHub content (issues, PRs, commits, docs).
 - Never generate malformed Markdown.
 - Use proper `##` headings; never use bold text as headings.
 - Wrap file paths in backticks: `src/modeldock/core/lifecycle.py`.
-- Use forward slashes only (never `\`).
+- Use forward slashes only (never `\`). **Never escape paths with backslashes**
+  (no `\path\`); the backticks alone are sufficient.
+- Never emit raw Unicode escapes like `\u00a7`; write the literal character
+  (`§`) or use ASCII (`Section 2`).
 
 ### Code & Commands
 
