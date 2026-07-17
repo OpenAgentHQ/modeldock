@@ -13,6 +13,9 @@ for rules, [`Architecture.md`](./Architecture.md) for the design contract.
 3. Confirm the task is approved (no code without an approved plan).
 4. **Create and activate a virtual environment** (`.venv`) and install all
    required libraries into it — never use global/system Python (see §1).
+5. **ALWAYS work on a new branch** — never commit or push directly to `main`.
+   Create a topic branch (see §2), push it, and open a PR for review. This
+   applies to every change: docs, features, fixes, chores.
 
 ---
 
@@ -43,9 +46,17 @@ pre-commit install
 ## 2. Workflow (mandatory)
 
 ```
-discover → propose → approve → init session → plan → execute → validate
+branch → discover → propose → approve → init session → plan → execute → validate → PR
 ```
 
+**Branch first (never work on `main`):**
+
+```bash
+git checkout main && git pull origin main
+git checkout -b <type>/<desc>      # feature/, fix/, docs/, refactor/, test/, chore/
+```
+
+- **Branch:** create a topic branch from current `main` for every task.
 - **Discover:** read docs + context files. No files written yet.
 - **Propose:** summarize what/where/approach. Request approval.
 - **Approve:** only after user sign-off may you write files.
@@ -53,6 +64,8 @@ discover → propose → approve → init session → plan → execute → valid
 - **Plan:** break into atomic subtasks; mark independent ones `parallel: true`.
 - **Execute:** one step at a time; validate (type-check, lint, test) after each.
 - **Validate:** run full suite; suggest TestEngineer/CodeReviewer; summarize.
+- **PR:** commit to the topic branch, push, and open a PR for review. Never
+  self-merge; the user reviews and merges.
 
 ---
 
@@ -78,6 +91,7 @@ src/modeldock/
 ## 4. Hard Rules (from AGENT.md)
 
 - No code without an approved plan.
+- **ALWAYS work on a new branch — never commit or push to `main`.**
 - `domain/` and `ports/` stay pure (no I/O, no Ollama/HTTP/fs).
 - Depend inward only.
 - New runtimes = adapters + one entry-point line. **Never edit core/CLI/API.**
@@ -136,8 +150,10 @@ testable without a runtime.
 
 ## 9. Commit & PR
 
+- **Always branch first** (see §0 step 5 and §2). Never commit or push to `main`.
 - Commits: imperative, repo-style; never commit secrets or `.env`.
 - PRs: reference the task; ensure CI green; update docs if behavior changed.
+- Open the PR for the user to review — never self-merge.
 - Only commit/push/PR when explicitly requested.
 
 ---
