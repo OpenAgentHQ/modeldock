@@ -97,11 +97,12 @@ def test_cli_config_show_offline() -> None:
     assert "default_backend" in result.output
 
 
-def test_cli_installed_offline_empty() -> None:
-    # Without the Ollama SDK/runtime, `installed` degrades gracefully to an
-    # empty list (does not raise) — exit code 0.
+def test_cli_installed_offline_errors() -> None:
+    # Without the Ollama SDK installed, `installed` surfaces an actionable
+    # error (it must not silently report an empty list for a setup problem).
     result = runner.invoke(app, ["installed"])
-    assert result.exit_code == 0
+    assert result.exit_code != 0
+    assert "modeldock[ollama]" in result.output
 
 
 def test_cli_load_offline_errors() -> None:

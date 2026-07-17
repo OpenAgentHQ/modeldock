@@ -61,12 +61,22 @@ class RuntimeRegistry:
         except Exception as exc:
             self._logger.debug("Entry-point discovery unavailable: %s", exc)
 
-    def get(self, backend: RuntimeBackend) -> RuntimePort:
-        """Return a runtime instance for backend (entry points win)."""
+    def get(self, backend: RuntimeBackend, host: str | None = None) -> RuntimePort:
+        """Return a runtime instance for backend (entry points win).
+
+        ``host`` is forwarded to the Ollama adapter so a configured host
+        override always applies (the client is built lazily per instance).
+        """
         factory = self._entry_points.get(backend) or _BUILTIN.get(backend)
         if factory is None:
             raise KeyError(f"No runtime registered for backend {backend.value!r}")
-        return factory()
+        runtime = factory()
+        if host is not None and backend == RuntimeBackend.OLLAMA:
+            try:
+                runtime._host = host  # type: ignore[attr-defined]
+            except Exception:  # nosec B110 - built-in adapter supports _host
+                pass
+        return runtime
 
     @staticmethod
     def _make_factory(instance: RuntimePort) -> Callable[[], RuntimePort]:
