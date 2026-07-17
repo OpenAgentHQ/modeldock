@@ -7,6 +7,7 @@ SDK at module load (keeps base install light). See Architecture.md §4/§14.
 
 from __future__ import annotations
 
+import time
 from typing import Any, List, Optional
 
 from modeldock.adapters.runtimes.base import BaseRuntime
@@ -15,6 +16,7 @@ from modeldock.domain.model import ModelRef, RuntimeBackend
 from modeldock.ports.runtime import PullResult
 
 _OLLAMA_DEFAULT_HOST = "http://localhost:11434"
+_PULL_VERIFY_BACKOFF_SECONDS = 0.1
 
 
 class OllamaRuntime(BaseRuntime):
@@ -85,9 +87,18 @@ class OllamaRuntime(BaseRuntime):
             client.pull(ref.qualified_name(), stream=progress is not None)
         except TypeError:
             client.pull(ref.qualified_name())
-        if progress is not None:
-            progress.finish(desc=f"Pulled {ref.qualified_name()}")
-        return PullResult(ref=ref, success=True, bytes_downloaded=total)
+        for attempt in range(2):
+            if self.is_installed(ref):
+                if progress is not None:
+                    progress.finish(desc=f"Pulled {ref.qualified_name()}")
+                return PullResult(ref=ref, success=True, bytes_downloaded=total)
+            if attempt == 0:
+                time.sleep(_PULL_VERIFY_BACKOFF_SECONDS)
+        return PullResult(
+            ref=ref,
+            success=False,
+            error=f"{ref.qualified_name()} not listed after pull",
+        )
 
     def _get_client(self, ref: ModelRef) -> Any:
         client = self._ensure_client()
