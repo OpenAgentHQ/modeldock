@@ -120,9 +120,7 @@ class FakeRuntime(RuntimePort):
         return list(self._installed)
 
     def is_installed(self, ref: ModelRef) -> bool:
-        return any(
-            r.name == ref.name and r.tag == ref.tag for r in self._installed
-        )
+        return any(r.name == ref.name and r.tag == ref.tag for r in self._installed)
 
     def pull(self, ref: ModelRef, progress: Any = None) -> PullResult:
         if self.pull_should_fail:

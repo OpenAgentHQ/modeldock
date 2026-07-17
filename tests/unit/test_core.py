@@ -20,9 +20,7 @@ def test_download_pull_records_on_success(
     assert fake_cache.is_fresh(ref)
 
 
-def test_download_pull_raises_on_failure(
-    fake_runtime: object, fake_cache: object
-) -> None:
+def test_download_pull_raises_on_failure(fake_runtime: object, fake_cache: object) -> None:
     fake_runtime.pull_should_fail = True
     svc = DownloadService(fake_runtime, fake_cache)
     with pytest.raises(DownloadError):
