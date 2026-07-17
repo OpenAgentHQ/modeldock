@@ -17,6 +17,8 @@ jobs:
     permissions:
       # Required for trusted publishing (OIDC); remove if using API token.
       id-token: write
+      # Required to create the GitHub Release via gh release create.
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
