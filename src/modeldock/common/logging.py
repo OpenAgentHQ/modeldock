@@ -11,6 +11,8 @@ import logging
 from typing import Optional
 
 _LOGGER_NAME = "modeldock"
+_VALID_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+_FALLBACK_LEVEL = "INFO"
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
@@ -20,6 +22,21 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return logging.getLogger(_LOGGER_NAME)
 
 
+def _normalize_level(level: object) -> str:
+    """Coerce any input to a valid logging level name.
+
+    Defensive boundary: the CLI must never pass framework objects (e.g. a Typer
+    ``OptionInfo``) into this function. If ``level`` is not a usable string or is
+    not a recognized level, fall back to ``INFO`` rather than crashing.
+    """
+    if not isinstance(level, str):
+        return _FALLBACK_LEVEL
+    normalized = level.strip().upper()
+    if normalized not in _VALID_LEVELS:
+        return _FALLBACK_LEVEL
+    return normalized
+
+
 def configure_logging(
     level: str = "ERROR",
     fmt: Optional[str] = None,
@@ -27,7 +44,7 @@ def configure_logging(
 ) -> logging.Logger:
     """Configure the ``modeldock`` root logger. Call only from entry points."""
     logger = logging.getLogger(_LOGGER_NAME)
-    logger.setLevel(getattr(logging, level.upper(), logging.ERROR))
+    logger.setLevel(getattr(logging, _normalize_level(level), logging.INFO))
     logger.handlers.clear()
     handler = logging.StreamHandler()
     if use_json:

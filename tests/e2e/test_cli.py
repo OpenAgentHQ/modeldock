@@ -8,6 +8,8 @@ commands work end to end. Marked `e2e` so they can be selected/skipped as a grou
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 from typer.testing import CliRunner
 
@@ -22,6 +24,35 @@ def test_cli_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "modeldock" in result.output.lower()
+
+
+def test_cli_default_invocation_sets_error_level() -> None:
+    # No --log-level -> callback resolves to the Typer default (ERROR) and does
+    # not crash on an OptionInfo leaking through.
+    result = runner.invoke(app, ["list"])
+    assert result.exit_code == 0
+    assert logging.getLogger("modeldock").level == logging.ERROR
+
+
+def test_cli_no_arguments_shows_help() -> None:
+    # `no_args_is_help` means bare invocation prints help (exit 2), proving the
+    # callback ran and resolved options without an OptionInfo leaking through.
+    result = runner.invoke(app, [])
+    assert result.exit_code == 2
+    assert "modeldock" in result.output.lower()
+
+
+def test_cli_log_level_debug() -> None:
+    result = runner.invoke(app, ["--log-level", "DEBUG", "list"])
+    assert result.exit_code == 0
+    assert logging.getLogger("modeldock").level == logging.DEBUG
+
+
+def test_cli_invalid_log_level_falls_back_to_info() -> None:
+    # Invalid level must not crash; callback coerces to INFO.
+    result = runner.invoke(app, ["--log-level", "VERBOSE", "list"])
+    assert result.exit_code == 0
+    assert logging.getLogger("modeldock").level == logging.INFO
 
 
 def test_cli_version() -> None:
