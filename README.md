@@ -20,6 +20,7 @@
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python"></a>
   <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/v/modeldock.svg" alt="PyPI version"></a>
   <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/dm/modeldock.svg" alt="Downloads"></a>
+  <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/badge/PyPI-modeldock-blue" alt="PyPI"></a>
 </p>
 
 ---
