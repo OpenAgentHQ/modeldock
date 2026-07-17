@@ -2,9 +2,13 @@
 
 > The lightweight, Python-first **model manager for local AI models** — the package manager for local LLMs.
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org)
-[![Release](https://github.com/OpenAgentHQ/modeldock/actions/workflows/release.yml/badge.svg)](https://github.com/OpenAgentHQ/modeldock/actions)
+[![CI](https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml/badge.svg)](https://github.com/OpenAgentHQ/modeldock/actions/workflows/check.yml)
+[![CodeQL](https://github.com/OpenAgentHQ/modeldock/actions/workflows/codeql.yml/badge.svg)](https://github.com/OpenAgentHQ/modeldock/actions/workflows/codeql.yml)
+[![Coverage](https://codecov.io/gh/OpenAgentHQ/modeldock/branch/main/graph/badge.svg)](https://codecov.io/gh/OpenAgentHQ/modeldock)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org)
+[![PyPI version](https://img.shields.io/pypi/v/modeldock.svg)](https://pypi.org/project/modeldock/)
+[![Downloads](https://img.shields.io/pypi/dm/modeldock.svg)](https://pypi.org/project/modeldock/)
 
 ModelDock discovers, downloads, caches, verifies, and loads local LLMs through
 pluggable runtime adapters. It does **not** run inference itself; it orchestrates
@@ -25,7 +29,7 @@ write `md.load("llama3")` and ModelDock handles the rest.
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.9–3.12
 - A local [Ollama](https://ollama.com) install (for the first runtime)
 
 ### Installation
@@ -158,6 +162,9 @@ progress_style  = "rich"
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
 branch naming, coding standards, and the PR process.
 
+You can claim an issue to work on by commenting `/claim` on it — a maintainer
+will assign it to you.
+
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/OpenAgentHQ/modeldock/issues)
@@ -176,5 +183,5 @@ See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
 
 ## License
 
-ModelDock is licensed under the Apache 2.0 License — see [LICENSE](LICENSE) for
+ModelDock is licensed under the MIT License — see [LICENSE](LICENSE) for
 details.
