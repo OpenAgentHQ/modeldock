@@ -10,7 +10,11 @@ for rules, [`Architecture.md`](./Architecture.md) for the design contract.
 
 1. Read `CONTEXT.md`, `PROJECT.MD`, `Architecture.md`, `AGENT.md`.
 2. Use ContextScout to discover any project-specific standards before coding.
-3. Confirm the task is approved (no code without an approved plan).
+ 3. **No implementation without an approved plan.** When the user asks to
+    implement any feature, bug fix, or refactor, you MUST: (a) read
+    `QUICKSTART.md`, `AGENT.md`, and all files related to the task; (b) create
+    a concrete execution plan; (c) request approval before writing any code
+    (see §2).
 4. **Create and activate a virtual environment** (`.venv`) and install all
    required libraries into it — never use global/system Python (see §1).
 5. **ALWAYS work on a new branch** — never commit or push directly to `main`.
@@ -57,11 +61,21 @@ git checkout -b <type>/<desc>      # feature/, fix/, docs/, refactor/, test/, ch
 ```
 
 - **Branch:** create a topic branch from current `main` for every task.
-- **Discover:** read docs + context files. No files written yet.
-- **Propose:** summarize what/where/approach. Request approval.
-- **Approve:** only after user sign-off may you write files.
+- **Discover (mandatory before any plan):** When implementing a feature, bug
+  fix, or refactor, you MUST first read the relevant files — at minimum
+  `QUICKSTART.md` and `AGENT.md`, plus every file related to the task
+  (e.g. the relevant `src/modeldock/` module, `Architecture.md` section,
+  `pyproject.toml`, existing tests). Use ContextScout to surface related
+  context. No files are written during discovery.
+- **Plan (mandatory before any code):** Produce a concrete execution plan that
+  lists the files to create/modify, the approach per file, the order of work,
+  and how each step will be validated (type-check, lint, test). For multi-step
+  work, break it into atomic subtasks and mark independent ones
+  `parallel: true`.
+- **Propose & approve:** Present the execution plan to the user and **request
+  explicit approval**. Do NOT write or edit any implementation file until the
+  user signs off.
 - **Init session:** create `.tmp/sessions/<date>-<slug>/context.md`.
-- **Plan:** break into atomic subtasks; mark independent ones `parallel: true`.
 - **Execute:** one step at a time; validate (type-check, lint, test) after each.
 - **Validate:** run full suite; suggest TestEngineer/CodeReviewer; summarize.
 - **PR:** commit to the topic branch, push, and open a PR for review. Never
@@ -91,6 +105,8 @@ src/modeldock/
 ## 4. Hard Rules (from AGENT.md)
 
 - No code without an approved plan.
+- **Before any feature/bugfix/refactor:** read `QUICKSTART.md`, `AGENT.md`, and
+  all related files; create an execution plan; request approval before coding.
 - **ALWAYS work on a new branch — never commit or push to `main`.**
 - `domain/` and `ports/` stay pure (no I/O, no Ollama/HTTP/fs).
 - Depend inward only.
