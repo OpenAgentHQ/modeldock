@@ -1,0 +1,17 @@
+# CODEOWNERS for ModelDock
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+*       @OpenAgentHQ/maintainers
+
+# Architecture and agent rules
+/Architecture.md      @OpenAgentHQ/maintainers
+/AGENT.md             @OpenAgentHQ/maintainers
+/INSTRUCTIONS.md      @OpenAgentHQ/maintainers
+
+# Source code
+/src/                 @OpenAgentHQ/maintainers
+
+# CI / release
+/.github/             @OpenAgentHQ/maintainers
+/pyproject.toml       @OpenAgentHQ/maintainers
