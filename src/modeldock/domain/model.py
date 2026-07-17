@@ -1,0 +1,173 @@
+"""ModelDock domain layer — pure business entities and value objects.
+
+No I/O, no framework imports, no references to Ollama/HTTP/filesystem.
+This module defines *what* a model is; adapters provide *how* it is obtained.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import TYPE_CHECKING, List, Optional
+
+from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from modeldock.ports.registry import RegistryPort
+
+
+class Capability(str, Enum):
+    """Capabilities a model may expose."""
+
+    CHAT = "chat"
+    COMPLETION = "completion"
+    EMBED = "embed"
+    VISION = "vision"
+    REASONING = "reasoning"
+    TOOL_USE = "tool_use"
+
+    @classmethod
+    def from_value(cls, value: str) -> Capability:
+        """Resolve a capability from a string, case-insensitively."""
+        normalized = value.strip().lower()
+        for member in cls:
+            if member.value == normalized:
+                return member
+        raise ValueError(f"Unknown capability: {value!r}")
+
+
+class Category(str, Enum):
+    """High-level model categories used for discovery and bulk install."""
+
+    CHAT = "chat"
+    CODING = "coding"
+    EMBEDDING = "embedding"
+    VISION = "vision"
+    REASONING = "reasoning"
+    INSTRUCT = "instruct"
+
+    @classmethod
+    def from_value(cls, value: str) -> Category:
+        """Resolve a category from a string, case-insensitively."""
+        normalized = value.strip().lower()
+        for member in cls:
+            if member.value == normalized:
+                return member
+        raise ValueError(f"Unknown category: {value!r}")
+
+
+class RuntimeBackend(str, Enum):
+    """Supported model runtimes. New runtimes register as adapters."""
+
+    OLLAMA = "ollama"
+    LM_STUDIO = "lmstudio"
+    LLAMACPP = "llamacpp"
+    JAN = "jan"
+    GPT4ALL = "gpt4all"
+    VLLM = "vllm"
+
+    @classmethod
+    def from_value(cls, value: str) -> RuntimeBackend:
+        """Resolve a backend from a string, case-insensitively."""
+        normalized = value.strip().lower()
+        for member in cls:
+            if member.value == normalized:
+                return member
+        raise ValueError(f"Unknown runtime backend: {value!r}")
+
+
+class ModelVariant(BaseModel):
+    """A specific tag/variant of a model (e.g. llama3:8b)."""
+
+    tag: str
+    params: Optional[str] = None
+    size_bytes: Optional[int] = None
+    min_ram: Optional[str] = None
+
+
+class ModelSpec(BaseModel):
+    """Canonical, registry-described description of a model.
+
+    Pure data — no I/O. Resolved from a friendly alias via ``ModelAlias``.
+    """
+
+    name: str
+    aliases: List[str] = Field(default_factory=list)
+    category: Category
+    capabilities: List[Capability] = Field(default_factory=list)
+    default_tag: str = "latest"
+    variants: List[ModelVariant] = Field(default_factory=list)
+    description: str = ""
+    backend_hints: List[RuntimeBackend] = Field(default_factory=list)
+
+    def default_variant(self) -> Optional[ModelVariant]:
+        """Return the variant matching ``default_tag``, if present."""
+        for variant in self.variants:
+            if variant.tag == self.default_tag:
+                return variant
+        return None
+
+
+class ModelRef(BaseModel):
+    """A concrete reference to a model: name plus optional tag and backend."""
+
+    name: str
+    tag: str = "latest"
+    backend: Optional[RuntimeBackend] = None
+
+    @classmethod
+    def parse(cls, value: str, backend: Optional[RuntimeBackend] = None) -> ModelRef:
+        """Parse ``name`` or ``name:tag`` into a ``ModelRef``.
+
+        Raises ``AliasResolutionError`` on empty input.
+        """
+        from modeldock.domain.errors import AliasResolutionError
+
+        if not value or not value.strip():
+            raise AliasResolutionError("Model reference cannot be empty")
+        text = value.strip()
+        if ":" in text:
+            name, tag = text.split(":", 1)
+            name, tag = name.strip(), tag.strip()
+            if not name or not tag:
+                raise AliasResolutionError(f"Invalid model reference: {value!r}")
+        else:
+            name, tag = text, "latest"
+        return cls(name=name, tag=tag, backend=backend)
+
+    def qualified_name(self) -> str:
+        """Return ``name:tag`` form used by runtimes."""
+        return f"{self.name}:{self.tag}"
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.tag, self.backend))
+
+
+class ModelAlias:
+    """Pure alias-resolution rules mapping friendly names to canonical specs."""
+
+    @staticmethod
+    def resolve(value: str, registry: RegistryPort) -> ModelSpec:
+        """Resolve a friendly name/tag to a ``ModelSpec`` via the registry.
+
+        ``registry`` must expose ``get(ref: ModelRef) -> ModelSpec``.
+        """
+        from modeldock.domain.errors import AliasResolutionError
+
+        if not value or not value.strip():
+            raise AliasResolutionError("Cannot resolve empty model alias")
+        ref = ModelRef.parse(value)
+        try:
+            return registry.get(ref)
+        except Exception as exc:  # registry raises typed errors; re-wrap clearly
+            raise AliasResolutionError(f"Could not resolve alias {value!r}: {exc}") from exc
+
+    @staticmethod
+    def matches_query(spec: ModelSpec, query: str) -> bool:
+        """Return True if ``spec`` matches a free-text search ``query``."""
+        q = query.strip().lower()
+        if not q:
+            return True
+        haystack = [spec.name.lower(), spec.description.lower(), spec.category.value]
+        haystack += [a.lower() for a in spec.aliases]
+        haystack += [c.value for c in spec.capabilities]
+        return any(q in field for field in haystack)
