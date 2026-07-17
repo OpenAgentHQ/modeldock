@@ -55,6 +55,22 @@ gh pr create --title "chore: release vX.Y.Z" --base main
 
 ## Tag Release
 
+Pushing the tag is the **only manual action** required to ship. The
+`.github/workflows/release.yml` workflow is triggered automatically by the tag
+push (`on: push: tags: ["v*.*.*"]`) and runs the entire release pipeline with
+no further human intervention:
+
+1. **Verify version consistency** — asserts `pyproject.toml` version ==
+   `src/modeldock/__init__.py` `__version__` == tag (fails the build on mismatch).
+2. **Run quality gates** — `ruff check`, `ruff format --check`, `mypy src`,
+   `bandit -r src`, `pytest`.
+3. **Build distributions** — `uv build` (sdist + wheel).
+4. **Publish to PyPI** — `pypa/gh-action-pypi-publish` via trusted publishing (OIDC).
+5. **Create GitHub Release** — `gh release create` with auto-generated notes.
+
+Do **not** run these steps manually at release time; the workflow handles them.
+Just create and push the tag:
+
 ```bash
 git checkout main
 git pull origin main
@@ -62,13 +78,24 @@ git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-- [ ] Tag created and pushed
+- [ ] Tag created and pushed (this auto-triggers the release workflow)
+- [ ] Release workflow completed: quality gates passed, built, published to PyPI, GitHub Release created
+
+> **Prerequisites (repo settings, one-time):** the `pypi` environment must be
+> configured with PyPI trusted publishing for `modeldock`, and the workflow's
+> `contents: write` permission must allow `gh release create`. If either is
+> missing, the publish or release step fails even though earlier steps pass.
 
 ---
 
 ## GitHub Release
 
-- [ ] GitHub Release created with descriptive title: `vX.Y.Z – [Title]`
+> **Automatic.** The release workflow creates the GitHub Release on tag push
+> (step 5 above) using `gh release create --generate-notes`. No manual creation
+> is needed. If you prefer a hand-written title/notes, you may delete the
+> auto-created release and recreate it manually after the workflow finishes.
+
+- [ ] GitHub Release created automatically by the workflow (title `vX.Y.Z`, auto-generated notes)
 - [ ] Release notes include PR links: `- **Name** — description (#PR_NUMBER)`
 - [ ] Release notes include Contributors section
 
