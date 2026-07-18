@@ -151,6 +151,11 @@ class ModelManager:
         ref = ModelRef.parse(name, backend=self._backend)
         self._runtime.remove(ref)
 
+    def run(self, name: str, prompt: Optional[str] = None, **opts: Any) -> Any:
+        """Run an interactive session for a model in the active runtime."""
+        ref = ModelRef.parse(name, backend=self._backend)
+        return self._runtime.run(ref, prompt=prompt, **opts)
+
     def verify(self, name: str) -> bool:
         """Verify a model is installed in the runtime."""
         ref = ModelRef.parse(name, backend=self._backend)

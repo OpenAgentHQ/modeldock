@@ -14,7 +14,7 @@ from modeldock.common.errors import (
 )
 from modeldock.common.logging import get_logger
 from modeldock.domain.model import ModelRef, ModelSpec, RuntimeBackend
-from modeldock.ports.runtime import PullResult
+from modeldock.ports.runtime import PullResult, RunResult
 
 _AVAILABILITY_TTL = 5.0
 
@@ -98,6 +98,17 @@ class BaseRuntime:
     def remove(self, ref: ModelRef) -> None:
         """Uninstall ``ref``."""
         raise NotImplementedError
+
+    def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> RunResult:
+        """Run an interactive session; unsupported by default.
+
+        Concrete runtimes override this when they can drive an interactive
+        session. The base default signals "not supported" so callers get a
+        clear, actionable error rather than a silent no-op.
+        """
+        raise NotImplementedError(
+            f"Runtime {self.backend.value!r} does not support interactive run sessions."
+        )
 
 
 __all__ = ["BaseRuntime"]

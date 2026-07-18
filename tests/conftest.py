@@ -142,6 +142,11 @@ class FakeRuntime(RuntimePort):
     def default_tag_for(self, spec: ModelSpec) -> str:
         return spec.default_tag
 
+    def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> Any:
+        from modeldock.ports.runtime import RunResult
+
+        return RunResult(ref=ref, success=True, completion_tokens=1)
+
 
 class FakeRegistry(RegistryPort):
     """In-memory registry seeded with a few specs."""

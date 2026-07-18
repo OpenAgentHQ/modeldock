@@ -49,6 +49,16 @@ class RuntimePort(Protocol):
         """Resolve the default variant tag for a model spec."""
         ...
 
+    def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> RunResult:
+        """Run an interactive session for ``ref``, streaming output.
+
+        ``prompt`` is an optional initial prompt; when ``None`` the runtime
+        drops into an interactive read-eval-print loop. Output is streamed to
+        stdout (or the configured ``ProgressPort``). Runtimes that cannot
+        support interactive sessions raise ``NotImplementedError``.
+        """
+        ...
+
 
 class PullResult:
     """Result of a pull/install operation (returned by ``RuntimePort.pull``)."""
@@ -72,3 +82,25 @@ class PullResult:
     def __repr__(self) -> str:
         state = "ok" if self.success else f"failed({self.error})"
         return f"PullResult({self.ref.qualified_name()}, {state})"
+
+
+class RunResult:
+    """Result of a ``run`` session (returned by ``RuntimePort.run``)."""
+
+    def __init__(
+        self,
+        ref: ModelRef,
+        success: bool,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        error: Optional[str] = None,
+    ) -> None:
+        self.ref = ref
+        self.success = success
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+        self.error = error
+
+    def __repr__(self) -> str:
+        state = "ok" if self.success else f"failed({self.error})"
+        return f"RunResult({self.ref.qualified_name()}, {state})"

@@ -14,10 +14,11 @@ from modeldock.adapters.runtimes.base import BaseRuntime
 from modeldock.common.errors import (
     DownloadError,
     ModelDockError,
+    ModelNotInstalledError,
     RuntimeUnavailableError,
 )
 from modeldock.domain.model import ModelRef, RuntimeBackend
-from modeldock.ports.runtime import PullResult
+from modeldock.ports.runtime import PullResult, RunResult
 
 _OLLAMA_DEFAULT_HOST = "http://localhost:11434"
 _PULL_VERIFY_BACKOFF_SECONDS = 0.1
@@ -194,6 +195,81 @@ class OllamaRuntime(BaseRuntime):
                 ref.name,
                 reason=f"Failed to remove model: {exc}",
             ) from exc
+
+    def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> RunResult:
+        """Run an interactive session, streaming tokens to stdout.
+
+        When ``prompt`` is given, runs a single completion and returns. When
+        ``prompt`` is ``None``, drops into a read-eval-print loop reading lines
+        from stdin until EOF or a quit command. Requires the model to be
+        installed locally.
+        """
+        if not self.is_installed(ref):
+            raise ModelNotInstalledError(ref.qualified_name())
+        client = self._ensure_client()
+        if prompt is not None:
+            return self._run_single(client, ref, prompt, **opts)
+        return self._run_repl(client, ref, **opts)
+
+    def _run_single(self, client: Any, ref: ModelRef, prompt: str, **opts: Any) -> RunResult:
+        """Run one completion and stream tokens to stdout."""
+        try:
+            stream = client.generate(ref.qualified_name(), prompt=prompt, stream=True, **opts)
+            completion_tokens = 0
+            for event in stream:
+                token = self._extract_token(event)
+                if token:
+                    completion_tokens += 1
+                    self._write(token)
+            self._write("\n")
+            return RunResult(
+                ref=ref, success=True, prompt_tokens=0, completion_tokens=completion_tokens
+            )
+        except ModelDockError:
+            raise
+        except Exception as exc:
+            return RunResult(ref=ref, success=False, error=str(exc))
+
+    def _run_repl(self, client: Any, ref: ModelRef, **opts: Any) -> RunResult:
+        """Interactive read-eval-print loop until EOF or a quit command."""
+        import sys
+
+        completion_tokens = 0
+        self._write(f">>> {ref.qualified_name()} (type 'exit' or Ctrl-D to quit)\n")
+        while True:
+            try:
+                line = sys.stdin.readline()
+            except EOFError:
+                break
+            if not line:
+                break
+            text = line.rstrip("\n")
+            if text.strip().lower() in {"exit", "quit", "/exit", "/quit"}:
+                break
+            if not text.strip():
+                continue
+            result = self._run_single(client, ref, text, **opts)
+            if not result.success:
+                return result
+            completion_tokens += result.completion_tokens
+        return RunResult(ref=ref, success=True, completion_tokens=completion_tokens)
+
+    @staticmethod
+    def _extract_token(event: Any) -> str:
+        """Pull the incremental token text out of a streamed generate event."""
+        if hasattr(event, "response"):
+            return str(getattr(event, "response", "") or "")
+        if isinstance(event, dict):
+            return str(event.get("response", "") or "")
+        return ""
+
+    @staticmethod
+    def _write(text: str) -> None:
+        """Write text to stdout without an implicit newline."""
+        import sys
+
+        sys.stdout.write(text)
+        sys.stdout.flush()
 
 
 __all__ = ["OllamaRuntime"]
