@@ -46,8 +46,10 @@ class LifecycleOrchestrator:
                 raise ModelNotInstalledError(ref.qualified_name(), auto_install=False)
             if ev is not None:
                 ev.before_pull(ref)
-            self._runtime.pull(ref, self._progress)
-            self._cache.record(ref, ref.tag, "", 0)
+            result = self._runtime.pull(ref, self._progress)
+            if not result.success:
+                raise ModelNotInstalledError(ref.qualified_name(), auto_install=do_install)
+            self._cache.record(ref, ref.tag, result.sha256 or "", result.bytes_downloaded)
             if ev is not None:
                 ev.after_install(ref, None)
 

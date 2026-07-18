@@ -224,7 +224,8 @@ Optional `RemoteRegistry` can refresh the catalog from a URL without a release.
 ## 11. Debugging Tips
 
 - Enable `DEBUG` logging: `modeldock --log-level DEBUG ...` or
-  `MODELDOCK_LOG_LEVEL=DEBUG`.
+  `MODELDOCK_LOG_LEVEL=DEBUG`. An unrecognized `--log-level` value is coerced
+  to `INFO` (never crashes) — see `Architecture.md` §12.
 - Inspect cache state: `modeldock cache status` / `modeldock cache path`.
 - Verify a runtime is detected: `python -c "import modeldock; print(md.installed())"`.
 - For download issues, check checksum mismatch errors — they raise

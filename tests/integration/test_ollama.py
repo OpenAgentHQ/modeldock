@@ -11,9 +11,15 @@ import shutil
 import pytest
 
 from modeldock.adapters.runtimes.registry import RuntimeRegistry
-from modeldock.domain.model import RuntimeBackend
+from modeldock.domain.model import ModelRef, RuntimeBackend
 
 ollama_present = shutil.which("ollama") is not None
+try:
+    import ollama  # noqa: F401 - optional extra; required for these tests
+
+    sdk_present = True
+except ImportError:
+    sdk_present = False
 
 pytestmark = pytest.mark.integration
 
@@ -30,7 +36,10 @@ def test_ollama_runtime_available() -> None:
     assert isinstance(runtime.is_available(), bool)
 
 
-@pytest.mark.skipif(not ollama_present, reason="Ollama CLI not installed")
+@pytest.mark.skipif(
+    not (ollama_present and sdk_present),
+    reason="Ollama CLI and Python SDK not both available",
+)
 def test_ollama_list_installed_runs() -> None:
     runtime = _runtime()
     # Should not raise even if nothing is installed.
@@ -42,7 +51,7 @@ def test_ollama_pull_and_remove() -> None:
     runtime = _runtime()
     if not runtime.is_available():
         pytest.skip("Ollama daemon not running")
-    ref = __import__("modeldock.domain.model", fromlist=["ModelRef"]).ModelRef.parse("llama3:8b")
+    ref = ModelRef.parse("llama3:8b")
     result = runtime.pull(ref)
     assert result.success
     assert runtime.is_installed(ref)

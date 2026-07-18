@@ -75,13 +75,12 @@ class ModelManager:
             runtime = self._runtime_registry.get(backend)
         except KeyError as exc:
             raise RuntimeUnavailableError(backend.value) from exc
+        # Apply the configured host at construction time so it always takes
+        # effect (the Ollama client is built lazily and cached per instance).
+        if backend == RuntimeBackend.OLLAMA and cfg.ollama_host:
+            runtime = self._runtime_registry.get(backend, host=cfg.ollama_host)
         if not runtime.is_available():
             self._logger.warning("Runtime %s not available", backend.value)
-        if backend == RuntimeBackend.OLLAMA and cfg.ollama_host:
-            try:
-                runtime._host = cfg.ollama_host  # type: ignore[attr-defined]
-            except Exception:  # nosec B110 - best-effort override, ignore if unsupported
-                pass
         return runtime
 
     def _default_cache(self, cfg: Settings) -> CachePort:
