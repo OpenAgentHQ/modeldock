@@ -103,8 +103,16 @@ class ModelManager:
         return self._runtime.list_installed()
 
     def info(self, name: str) -> Any:
-        """Return metadata for a model."""
-        return self._registry.info(name)
+        """Return metadata for a model, including installed tags/versions.
+
+        Surfaces the concrete tags present in the active runtime (issue #10) by
+        intersecting the runtime's installed refs with this model's name.
+        """
+        ref = ModelRef.parse(name)
+        installed_tags = [
+            existing.tag for existing in self._runtime.list_installed() if existing.name == ref.name
+        ]
+        return self._registry.info(name, installed_tags=installed_tags)
 
     def categories(self) -> List[Category]:
         """Return all catalog categories."""

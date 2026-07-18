@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import List
 
-from modeldock.domain.model import Category, ModelRef, ModelSpec
+from modeldock.domain.model import Category, ModelInfo, ModelRef, ModelSpec
 from modeldock.ports.registry import RegistryPort
 
 
@@ -22,9 +22,16 @@ class RegistryService:
         """Search the catalog by name/alias/capability/category."""
         return self._registry.search(query)
 
-    def info(self, name: str) -> ModelSpec:
-        """Return metadata for a model (raises ModelNotFoundError)."""
-        return self._registry.get(ModelRef.parse(name))
+    def info(self, name: str, installed_tags: List[str] | None = None) -> ModelInfo:
+        """Return metadata for a model, enriched with installed tags.
+
+        ``installed_tags`` are the concrete tags present in the active runtime
+        (e.g. ``["8b", "latest"]``). When omitted, only catalog metadata is
+        returned and ``installed`` is ``False``. Raises ``ModelNotFoundError``
+        when the model is unknown to the registry.
+        """
+        spec = self._registry.get(ModelRef.parse(name))
+        return ModelInfo.from_spec(spec, installed_tags or [])
 
     def categories(self) -> List[Category]:
         """Return all categories present in the catalog."""

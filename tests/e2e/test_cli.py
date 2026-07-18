@@ -86,6 +86,13 @@ def test_cli_info_unknown_exits_nonzero() -> None:
     assert result.exit_code != 0
 
 
+def test_cli_info_renders_installed_section() -> None:
+    result = runner.invoke(app, ["info", "llama3"])
+    assert result.exit_code == 0
+    assert "Installed:" in result.output
+    assert "Variants:" in result.output
+
+
 def test_cli_cache_status_offline() -> None:
     result = runner.invoke(app, ["cache", "status"])
     assert result.exit_code == 0
