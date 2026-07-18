@@ -211,9 +211,7 @@ class OllamaRuntime(BaseRuntime):
             return self._run_single(client, ref, prompt, **opts)
         return self._run_repl(client, ref, **opts)
 
-    def _run_single(
-        self, client: Any, ref: ModelRef, prompt: str, **opts: Any
-    ) -> RunResult:
+    def _run_single(self, client: Any, ref: ModelRef, prompt: str, **opts: Any) -> RunResult:
         """Run one completion and stream tokens to stdout."""
         try:
             stream = client.generate(ref.qualified_name(), prompt=prompt, stream=True, **opts)
