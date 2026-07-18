@@ -8,7 +8,7 @@ from typing import Any, Iterator, List
 import pytest
 
 from modeldock.adapters.runtimes.ollama import OllamaRuntime
-from modeldock.common.errors import DownloadError, RuntimeUnavailableError
+from modeldock.common.errors import DownloadError, ModelNotInstalledError, RuntimeUnavailableError
 from modeldock.domain.model import ModelRef
 
 
@@ -211,3 +211,82 @@ def test_env_host_used_when_no_explicit_host(monkeypatch: Any) -> None:
     runtime = OllamaRuntime()
     runtime.is_available()
     assert built["host"] == "http://envhost:9999"
+
+
+class _GenerateClient:
+    """Fake ollama.Client supporting list() + generate() streaming."""
+
+    def __init__(self, installed: bool = True) -> None:
+        self._installed = installed
+        self.generated: List[str] = []
+
+    def list(self) -> dict[str, Any]:
+        if self._installed:
+            return {"models": [{"name": "llama3:latest"}]}
+        return {"models": []}
+
+    def generate(self, model: str, prompt: str = "", stream: bool = False, **opts: Any) -> Any:
+        self.generated.append(prompt)
+        if stream:
+
+            def _gen() -> Iterator[dict[str, Any]]:
+                yield {"response": "Hello"}
+                yield {"response": " world"}
+
+            return _gen()
+        return {"response": "Hello world"}
+
+
+def _runtime_with_generate(installed: bool = True) -> OllamaRuntime:
+    runtime = OllamaRuntime()
+    runtime._client = _GenerateClient(installed=installed)
+    return runtime
+
+
+def test_run_single_prompt_streams_tokens(monkeypatch: Any) -> None:
+    runtime = _runtime_with_generate()
+    written: List[str] = []
+    monkeypatch.setattr(OllamaRuntime, "_write", staticmethod(lambda t: written.append(t)))
+
+    result = runtime.run(ModelRef.parse("llama3"), prompt="hi")
+
+    assert result.success
+    assert result.completion_tokens == 2
+    assert "".join(written) == "Hello world\n"
+
+
+def test_run_raises_when_model_not_installed() -> None:
+    runtime = _runtime_with_generate(installed=False)
+    with pytest.raises(ModelNotInstalledError):
+        runtime.run(ModelRef.parse("llama3"), prompt="hi")
+
+
+def test_run_repl_reads_stdin_until_exit(monkeypatch: Any) -> None:
+    runtime = _runtime_with_generate()
+    written: List[str] = []
+    monkeypatch.setattr(OllamaRuntime, "_write", staticmethod(lambda t: written.append(t)))
+    monkeypatch.setattr("sys.stdin", __import__("io").StringIO("first\nsecond\nexit\n"))
+
+    result = runtime.run(ModelRef.parse("llama3"))
+
+    assert result.success
+    # Two prompts processed (exit terminates the loop).
+    assert result.completion_tokens == 4
+    assert "first" in runtime._client.generated  # type: ignore[attr-defined]
+    assert "second" in runtime._client.generated  # type: ignore[attr-defined]
+
+
+def test_run_single_prompt_wraps_sdk_error(monkeypatch: Any) -> None:
+    runtime = _runtime_with_generate()
+
+    class _BoomClient:
+        def list(self) -> dict[str, Any]:
+            return {"models": [{"name": "llama3:latest"}]}
+
+        def generate(self, model: str, prompt: str = "", stream: bool = False, **opts: Any) -> Any:
+            raise RuntimeError("boom")
+
+    runtime._client = _BoomClient()
+    result = runtime.run(ModelRef.parse("llama3"), prompt="hi")
+    assert not result.success
+    assert "boom" in result.error
