@@ -128,3 +128,36 @@ def test_manager_cache_service(manager_with_fakes: object) -> None:
     mgr = manager_with_fakes
     mgr.install("llama3")
     assert mgr.cache.status()
+
+
+def test_manager_info_surfaces_installed_tags(
+    fake_runtime: object, fake_registry: object, fake_cache: object
+) -> None:
+    from modeldock.domain.model import ModelRef
+
+    fake_runtime._installed = [  # type: ignore[attr-defined]
+        ModelRef.parse("llama3:8b"),
+        ModelRef.parse("llama3:latest"),
+    ]
+    mgr = ModelManagerWithFakes(fake_runtime, fake_registry, fake_cache)
+    info = mgr.info("llama3")
+    assert info.installed is True
+    assert set(info.installed_tags) == {"8b", "latest"}
+
+
+def test_manager_info_not_installed_reports_false(
+    fake_runtime: object, fake_registry: object, fake_cache: object
+) -> None:
+    mgr = ModelManagerWithFakes(fake_runtime, fake_registry, fake_cache)
+    info = mgr.info("llama3")
+    assert info.installed is False
+    assert info.installed_tags == []
+
+
+class ModelManagerWithFakes:
+    """Helper wiring a ModelManager with explicit fakes (no Ollama needed)."""
+
+    def __new__(cls, runtime: object, registry: object, cache: object) -> object:
+        from modeldock.core.manager import ModelManager
+
+        return ModelManager(runtime=runtime, registry=registry, cache=cache)

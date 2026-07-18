@@ -107,6 +107,43 @@ class ModelSpec(BaseModel):
         return None
 
 
+class ModelInfo(BaseModel):
+    """Catalog metadata enriched with the tags/versions installed locally.
+
+    A superset of ``ModelSpec``: carries the same discovery metadata plus the
+    concrete tags present in the active runtime (``installed_tags``) and a
+    convenience ``installed`` flag. Pure data — no I/O. See issue #10.
+    """
+
+    name: str
+    aliases: List[str] = Field(default_factory=list)
+    category: Category
+    capabilities: List[Capability] = Field(default_factory=list)
+    default_tag: str = "latest"
+    variants: List[ModelVariant] = Field(default_factory=list)
+    description: str = ""
+    backend_hints: List[RuntimeBackend] = Field(default_factory=list)
+    installed_tags: List[str] = Field(default_factory=list)
+    installed: bool = False
+
+    @classmethod
+    def from_spec(cls, spec: ModelSpec, installed_tags: List[str]) -> ModelInfo:
+        """Build a ``ModelInfo`` from a catalog spec and locally installed tags."""
+        tags = sorted(set(installed_tags))
+        return cls(
+            name=spec.name,
+            aliases=list(spec.aliases),
+            category=spec.category,
+            capabilities=list(spec.capabilities),
+            default_tag=spec.default_tag,
+            variants=list(spec.variants),
+            description=spec.description,
+            backend_hints=list(spec.backend_hints),
+            installed_tags=tags,
+            installed=bool(tags),
+        )
+
+
 class ModelRef(BaseModel):
     """A concrete reference to a model: name plus optional tag and backend."""
 

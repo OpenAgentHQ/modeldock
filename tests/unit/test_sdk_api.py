@@ -41,6 +41,16 @@ def test_info_unknown_raises() -> None:
         md.info("ghost-model")
 
 
+def test_info_returns_modelinfo_with_installed_fields() -> None:
+    from modeldock.domain.model import ModelInfo
+
+    info = md.info("llama3")
+    assert isinstance(info, ModelInfo)
+    assert info.name == "llama3"
+    assert info.installed is False
+    assert info.installed_tags == []
+
+
 def test_categories_offline() -> None:
     cats = md.categories()
     assert md.Category.CHAT in cats
