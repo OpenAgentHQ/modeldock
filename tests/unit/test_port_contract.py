@@ -14,7 +14,7 @@ import pytest
 
 from modeldock.domain.model import Category, ModelRef, ModelSpec
 from modeldock.ports.cache import CachePort
-from modeldock.ports.runtime import PullResult, RuntimePort
+from modeldock.ports.runtime import PullResult, RuntimePort, RuntimeStatus
 
 # --- RuntimePort contract ---------------------------------------------------
 
@@ -65,6 +65,13 @@ def test_runtime_get_client(runtime_impl: RuntimePort) -> None:
 def test_runtime_default_tag(runtime_impl: RuntimePort) -> None:
     spec = ModelSpec(name="x", category=Category.CHAT)
     assert runtime_impl.default_tag_for(spec) == spec.default_tag
+
+
+def test_runtime_status_contract(runtime_impl: RuntimePort) -> None:
+    status = runtime_impl.status()
+    assert isinstance(status, RuntimeStatus)
+    assert status.backend is not None
+    assert status.device.value in {"gpu", "cpu", "unknown"}
 
 
 # --- CachePort contract -----------------------------------------------------

@@ -13,7 +13,7 @@ from modeldock.common.errors import (
     RuntimeUnavailableError,
 )
 from modeldock.common.logging import get_logger
-from modeldock.domain.model import ModelRef, ModelSpec, RuntimeBackend
+from modeldock.domain.model import Device, ModelRef, ModelSpec, RuntimeBackend, RuntimeStatus
 from modeldock.ports.runtime import PullResult, RunResult
 
 _AVAILABILITY_TTL = 5.0
@@ -54,6 +54,27 @@ class BaseRuntime:
     def default_tag_for(self, spec: ModelSpec) -> str:
         """Resolve the default tag for a spec (runtime may override)."""
         return spec.default_tag
+
+    def status(self) -> RuntimeStatus:
+        """Report availability and execution device.
+
+        The base default reports availability and an ``UNKNOWN`` device; concrete
+        runtimes override ``_detect_device`` to populate the real device.
+        """
+        available = self.is_available()
+        device = self._detect_device() if available else Device.UNKNOWN
+        return RuntimeStatus(
+            backend=self.backend,
+            available=available,
+            device=device,
+        )
+
+    def _detect_device(self) -> Device:
+        """Best-effort device detection; ``UNKNOWN`` by default.
+
+        Concrete runtimes override this to inspect loaded-model metadata.
+        """
+        return Device.UNKNOWN
 
     def pull(self, ref: ModelRef, progress: Any = None) -> PullResult:
         """Normalized pull: checks availability, delegates to ``_do_pull``."""

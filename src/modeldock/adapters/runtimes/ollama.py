@@ -17,7 +17,7 @@ from modeldock.common.errors import (
     ModelNotInstalledError,
     RuntimeUnavailableError,
 )
-from modeldock.domain.model import ModelRef, RuntimeBackend
+from modeldock.domain.model import Device, ModelRef, RuntimeBackend
 from modeldock.ports.runtime import PullResult, RunResult
 
 _OLLAMA_DEFAULT_HOST = "http://localhost:11434"
@@ -270,6 +270,48 @@ class OllamaRuntime(BaseRuntime):
 
         sys.stdout.write(text)
         sys.stdout.flush()
+
+    # --- device / status --------------------------------------------------
+
+    def _detect_device(self) -> Device:
+        """Detect GPU vs CPU execution from ``ollama ps`` VRAM usage.
+
+        Ollama reports ``size_vram`` for each loaded model. A positive value
+        means the model is resident on the GPU; zero/None means CPU execution.
+        When no model is loaded we cannot tell, so report ``UNKNOWN``.
+        """
+        try:
+            client = self._ensure_client()
+            response = client.ps()
+        except Exception:
+            # Device detection is best-effort; never fail the status probe.
+            return Device.UNKNOWN
+        models = self._extract_ps_models(response)
+        if not models:
+            return Device.UNKNOWN
+        for entry in models:
+            vram = self._extract_size_vram(entry)
+            if vram and int(vram) > 0:
+                return Device.GPU
+        return Device.CPU
+
+    @staticmethod
+    def _extract_ps_models(response: Any) -> List[Any]:
+        """Pull the ``models`` list out of a ps() response (object or dict)."""
+        if hasattr(response, "models"):
+            return list(getattr(response, "models", []) or [])
+        if isinstance(response, dict):
+            return list(response.get("models", []) or [])
+        return []
+
+    @staticmethod
+    def _extract_size_vram(entry: Any) -> int:
+        """Extract ``size_vram`` (VRAM bytes) from a ps() model entry."""
+        if hasattr(entry, "size_vram"):
+            return int(entry.size_vram or 0)
+        if isinstance(entry, dict):
+            return int(entry.get("size_vram") or 0)
+        return 0
 
 
 __all__ = ["OllamaRuntime"]
