@@ -106,6 +106,66 @@ def test_pull_streams_progress_and_accounts_bytes(monkeypatch: Any) -> None:
     assert "finish" in events
 
 
+def test_pull_is_idempotent_when_already_installed() -> None:
+    # Daemon always reports the model as already present.
+    client = _StableListClient({"models": [{"name": "llama3:latest"}]})
+    runtime = _runtime_with(client)
+
+    result = runtime.pull(ModelRef.parse("llama3"))
+
+    assert result.success
+    assert result.already_present is True
+    # The daemon's pull() must NOT be called for an installed model.
+    assert client.pull_calls == []
+
+
+def test_pull_invokes_daemon_when_not_installed() -> None:
+    # is_available() consumes one list() call; is_installed() sees empty,
+    # then the model appears after the daemon pull() during verification.
+    client = _PullClient(
+        [
+            {"models": []},  # is_available() probe
+            {"models": []},  # is_installed() check -> not present
+            {"models": [{"name": "llama3:latest"}]},  # post-pull verify
+        ]
+    )
+    runtime = _runtime_with(client)
+
+    result = runtime.pull(ModelRef.parse("llama3"))
+
+    assert result.success
+    assert result.already_present is False
+    assert client.pull_calls == ["llama3:latest"]
+
+
+class _StableListClient:
+    """Fake client whose list() always returns the same response."""
+
+    def __init__(self, response: dict[str, Any]) -> None:
+        self._response = response
+        self.list_calls = 0
+        self.pull_calls: List[str] = []
+        self.deleted: List[str] = []
+
+    def pull(self, name: str, stream: bool = False) -> Any:
+        self.pull_calls.append(name)
+        if stream:
+
+            def _gen() -> Iterator[dict[str, Any]]:
+                yield {"status": "success"}
+
+            return _gen()
+        return None
+
+    def list(self) -> dict[str, Any]:
+        self.list_calls += 1
+        return self._response
+
+    def delete(self, name: str) -> dict[str, Any]:
+        self.deleted.append(name)
+        return {"status": "success"}
+
+
 def test_list_installed_parses_model_field() -> None:
     client = _PullClient([{"models": [{"model": "llama3:latest"}, {"model": "qwen3:8b"}]}])
     runtime = _runtime_with(client)
