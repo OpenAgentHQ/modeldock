@@ -80,3 +80,13 @@ def test_filesystem_cache_sha256(tmp_path: Path) -> None:
     f.write_bytes(b"hello world")
     digest = FilesystemCache.sha256_of(f)
     assert digest == "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+
+
+def test_cache_service_path_returns_real_dir(tmp_path: Path) -> None:
+    svc = CacheService(FilesystemCache(tmp_path))
+    assert svc.path() == str(tmp_path)
+
+
+def test_filesystem_cache_path_returns_cache_dir(tmp_path: Path) -> None:
+    cache = FilesystemCache(tmp_path)
+    assert cache.path() == str(tmp_path)

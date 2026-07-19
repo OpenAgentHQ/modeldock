@@ -106,6 +106,21 @@ class ModelSpec(BaseModel):
                 return variant
         return None
 
+    @classmethod
+    def from_ref(cls, ref: ModelRef) -> ModelSpec:
+        """Build a minimal spec for a model known only by a local ``ModelRef``.
+
+        Used as a fallback when a model is installed locally but absent from the
+        bundled catalog, so discovery/load still work. Carries no catalog
+        metadata beyond the name and tag.
+        """
+        return cls(
+            name=ref.name,
+            default_tag=ref.tag,
+            category=Category.CHAT,
+            capabilities=[Capability.CHAT],
+        )
+
 
 class ModelInfo(BaseModel):
     """Catalog metadata enriched with the tags/versions installed locally.
@@ -139,6 +154,23 @@ class ModelInfo(BaseModel):
             variants=list(spec.variants),
             description=spec.description,
             backend_hints=list(spec.backend_hints),
+            installed_tags=tags,
+            installed=bool(tags),
+        )
+
+    @classmethod
+    def from_ref(cls, ref: ModelRef, installed_tags: List[str]) -> ModelInfo:
+        """Build a minimal ``ModelInfo`` for a locally-installed, uncatalogued model.
+
+        Fallback used when a model is installed but absent from the bundled
+        catalog, so ``info()`` still returns useful data instead of raising.
+        """
+        tags = sorted(set(installed_tags))
+        return cls(
+            name=ref.name,
+            default_tag=ref.tag,
+            category=Category.CHAT,
+            capabilities=[Capability.CHAT],
             installed_tags=tags,
             installed=bool(tags),
         )

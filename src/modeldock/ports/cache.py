@@ -34,3 +34,7 @@ class CachePort(Protocol):
     def status(self) -> List[Dict[str, Any]]:
         """Return a snapshot of all cached entries."""
         ...
+
+    def path(self) -> str:
+        """Return the cache directory path."""
+        ...

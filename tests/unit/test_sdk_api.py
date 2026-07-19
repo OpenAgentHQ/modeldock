@@ -112,6 +112,50 @@ def test_sdk_load_via_fake_manager() -> None:
     assert client == {"client": "llama3:latest"}
 
 
+def test_info_falls_back_for_installed_uncatalogued_model() -> None:
+    from modeldock.domain.model import ModelRef
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    ref = ModelRef.parse("localmodel:latest")
+    runtime = FakeRuntime(installed=[ref])
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    info = mgr.info("localmodel:latest")
+    assert info.name == "localmodel"
+    assert info.installed is True
+    assert info.installed_tags == ["latest"]
+
+
+def test_info_unknown_not_installed_still_raises() -> None:
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    runtime = FakeRuntime(installed=[])
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    with pytest.raises(ModelNotFoundError):
+        mgr.info("ghost-model")
+
+
+def test_load_falls_back_for_installed_uncatalogued_model() -> None:
+    from modeldock.domain.model import ModelRef
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    ref = ModelRef.parse("localmodel:latest")
+    runtime = FakeRuntime(installed=[ref])
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    client = mgr.load("localmodel:latest")
+    assert client == {"client": "localmodel:latest"}
+
+
+def test_install_falls_back_for_installed_uncatalogued_model() -> None:
+    from modeldock.domain.model import ModelRef
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    ref = ModelRef.parse("localmodel:latest")
+    runtime = FakeRuntime(installed=[ref])
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    result = mgr.install("localmodel:latest")
+    assert result.name == "localmodel"
+
+
 def test_modelref_and_backend_exports() -> None:
     assert md.ModelRef.parse("llama3:8b").qualified_name() == "llama3:8b"
     assert md.RuntimeBackend.from_value("ollama") == RuntimeBackend.OLLAMA

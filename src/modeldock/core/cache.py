@@ -34,9 +34,8 @@ class CacheService:
         return self._cache.clean()
 
     def path(self) -> str:
-        """Return the cache directory path (best-effort)."""
-        record = self._cache.get_record(ModelRef.parse("__none__"))
-        return str(record) if record else "<cache>"
+        """Return the cache directory path."""
+        return self._cache.path()
 
 
 __all__ = ["CacheService"]

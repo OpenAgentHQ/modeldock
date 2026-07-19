@@ -24,7 +24,7 @@ from modeldock.core.config import ConfigService
 from modeldock.core.download import DownloadService
 from modeldock.core.lifecycle import LifecycleOrchestrator
 from modeldock.core.registry import RegistryService
-from modeldock.domain.model import Category, ModelRef, RuntimeBackend
+from modeldock.domain.model import Category, ModelInfo, ModelRef, RuntimeBackend
 from modeldock.ports.cache import CachePort
 from modeldock.ports.events import EventPort
 from modeldock.ports.registry import RegistryPort
@@ -106,13 +106,22 @@ class ModelManager:
         """Return metadata for a model, including installed tags/versions.
 
         Surfaces the concrete tags present in the active runtime (issue #10) by
-        intersecting the runtime's installed refs with this model's name.
+        intersecting the runtime's installed refs with this model's name. When
+        the model is not in the bundled catalog but is installed locally, falls
+        back to a minimal ``ModelInfo`` built from the local reference.
         """
         ref = ModelRef.parse(name)
         installed_tags = [
             existing.tag for existing in self._runtime.list_installed() if existing.name == ref.name
         ]
-        return self._registry.info(name, installed_tags=installed_tags)
+        try:
+            return self._registry.info(name, installed_tags=installed_tags)
+        except ModelNotFoundError:
+            # Fall back only for models that are actually installed locally but
+            # absent from the bundled catalog; otherwise surface the error.
+            if installed_tags:
+                return ModelInfo.from_ref(ref, installed_tags)
+            raise
 
     def categories(self) -> List[Category]:
         """Return all catalog categories."""
@@ -135,7 +144,13 @@ class ModelManager:
     def install(self, name: str, auto_install: bool = True) -> ModelRef:
         """Explicitly download/install a model."""
         ref = ModelRef.parse(name, backend=self._backend)
-        self._registry.info(name)  # raises ModelNotFoundError if unknown
+        # Validate against the catalog, but allow locally-known models that are
+        # absent from the bundled catalog (e.g. pulled outside ModelDock).
+        try:
+            self._registry.info(name)
+        except ModelNotFoundError:
+            if not self._runtime.is_installed(ref):
+                raise
         self._download.pull(ref)
         return ref
 
