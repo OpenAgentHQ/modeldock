@@ -72,16 +72,17 @@ class FilesystemCache:
         entry = data.get("entries", {}).get(self._key(ref))
         return cast(Optional[Dict[str, Any]], entry)
 
-    def clean(self) -> List[str]:
+    def clean(self, force: bool = False) -> List[str]:
         removed: List[str] = []
         data = self._read_manifest()
         entries = data.get("entries", {})
         for key, entry in list(entries.items()):
-            # Remove entries whose artifact file is missing.
-            name = entry.get("name", "")
-            artifact = self._cache_dir / f"{name}.bin"
-            if not artifact.exists():
-                removed.append(str(artifact))
+            # Safe default: only drop entries that are corrupt/partial (missing
+            # the fields we recorded). ModelDock does not manage the model blobs
+            # for Ollama, so a missing artifact file is NOT grounds for removal.
+            # force=True wipes every entry.
+            if force or not isinstance(entry, dict) or not entry.get("sha256"):
+                removed.append(key)
                 del entries[key]
         if removed:
             self._write_manifest(data)

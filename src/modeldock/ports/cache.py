@@ -27,8 +27,12 @@ class CachePort(Protocol):
         """Return the cached manifest entry for ``ref``, if any."""
         ...
 
-    def clean(self) -> List[str]:
-        """Remove orphaned/partial artifacts; return removed paths."""
+    def clean(self, force: bool = False) -> List[str]:
+        """Remove orphaned/partial artifacts; return removed paths.
+
+        Safe by default: only corrupt/partial manifest entries are removed.
+        Pass ``force=True`` to wipe every cached entry.
+        """
         ...
 
     def status(self) -> List[Dict[str, Any]]:

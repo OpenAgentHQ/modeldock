@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from modeldock.common.errors import DownloadError, ModelNotInstalledError
+from modeldock.common.errors import DownloadError, ModelNotFoundError, ModelNotInstalledError
 from modeldock.core.download import DownloadService
 from modeldock.core.lifecycle import LifecycleOrchestrator
 from modeldock.domain.model import ModelRef
@@ -103,11 +103,26 @@ def test_manager_install_category(manager_with_fakes: object) -> None:
     assert all(mgr.verify(r.name) for r in refs)
 
 
-def test_manager_update(manager_with_fakes: object) -> None:
+def test_manager_update_requires_confirm(manager_with_fakes: object) -> None:
     mgr = manager_with_fakes
     mgr.install("llama3")
-    ref = mgr.update("llama3")
+    with pytest.raises(DownloadError):
+        mgr.update("llama3")
+    # With confirm=True it proceeds (remove + re-pull).
+    ref = mgr.update("llama3", confirm=True)
     assert ref.name == "llama3"
+
+
+def test_manager_update_unknown_raises(manager_with_fakes: object) -> None:
+    mgr = manager_with_fakes
+    with pytest.raises(ModelNotFoundError):
+        mgr.update("ghost-model", confirm=True)
+
+
+def test_manager_update_cloud_model_raises(manager_with_fakes: object) -> None:
+    mgr = manager_with_fakes
+    with pytest.raises(DownloadError):
+        mgr.update("glm-5.2:cloud", confirm=True)
 
 
 def test_manager_remove(manager_with_fakes: object) -> None:

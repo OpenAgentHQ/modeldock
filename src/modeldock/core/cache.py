@@ -29,9 +29,13 @@ class CacheService:
         """Return a snapshot of cached entries."""
         return self._cache.status()
 
-    def clean(self) -> List[str]:
-        """Remove orphaned/partial artifacts; return removed paths."""
-        return self._cache.clean()
+    def clean(self, force: bool = False) -> List[str]:
+        """Remove orphaned/partial artifacts; return removed paths.
+
+        Safe by default (only corrupt/partial entries); pass ``force=True`` to
+        wipe every cached entry.
+        """
+        return self._cache.clean(force=force)
 
     def path(self) -> str:
         """Return the cache directory path."""

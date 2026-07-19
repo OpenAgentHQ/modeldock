@@ -15,6 +15,7 @@ from modeldock.adapters.registry import BundledRegistry
 from modeldock.adapters.runtimes.registry import RuntimeRegistry
 from modeldock.common.config import Settings
 from modeldock.common.errors import (
+    DownloadError,
     ModelNotFoundError,
     RuntimeUnavailableError,
 )
@@ -164,11 +165,32 @@ class ModelManager:
             refs.append(ref)
         return refs
 
-    def update(self, name: str) -> ModelRef:
-        """Pull a newer tag for an installed model."""
+    def update(self, name: str, confirm: bool = False) -> ModelRef:
+        """Pull a newer tag for an installed model.
+
+        Destructive: removes the current copy and re-downloads. Requires
+        ``confirm=True`` to proceed, so a large model is never re-pulled by
+        accident. Cloud/subscription models cannot be updated locally.
+        """
         ref = ModelRef.parse(name, backend=self._backend)
+        if ref.is_cloud:
+            raise DownloadError(
+                ref.name,
+                reason=(
+                    f"{ref.qualified_name()} is a cloud/subscription model and "
+                    "cannot be updated locally."
+                ),
+            )
         if not self._runtime.is_installed(ref):
             raise ModelNotFoundError(name)
+        if not confirm:
+            raise DownloadError(
+                ref.name,
+                reason=(
+                    f"update() removes and re-downloads {ref.qualified_name()}. "
+                    "Pass confirm=True to proceed."
+                ),
+            )
         self._runtime.remove(ref)
         self._download.pull(ref)
         return ref

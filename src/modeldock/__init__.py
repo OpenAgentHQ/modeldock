@@ -102,11 +102,11 @@ def install_category(category: str, backend: Optional[str] = None) -> List[Model
     return _manager().install_category(category)
 
 
-def update(name: str, backend: Optional[str] = None) -> ModelRef:
-    """Pull a newer tag."""
+def update(name: str, backend: Optional[str] = None, confirm: bool = False) -> ModelRef:
+    """Pull a newer tag (destructive: removes then re-downloads)."""
     if backend is not None:
-        return Manager(backend=backend).update(name)
-    return _manager().update(name)
+        return Manager(backend=backend).update(name, confirm=confirm)
+    return _manager().update(name, confirm=confirm)
 
 
 def remove(name: str, backend: Optional[str] = None) -> None:
