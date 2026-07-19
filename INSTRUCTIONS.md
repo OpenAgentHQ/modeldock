@@ -115,6 +115,8 @@ src/modeldock/
 - Library-friendly logging: no `basicConfig()` at import.
 - Typed errors (`ModelDockError` subclasses) with actionable context.
 - Cross-platform: `platformdirs` for paths; no hardcoded `/` or `C:\`.
+- **NEVER generate GitHub content with a coding agent.** Issues, PRs, commits,
+  and release notes must be authored by a human, not composed by a coding agent.
 
 ---
 
@@ -233,6 +235,11 @@ Rules for all generated GitHub content (issues, PRs, commits, docs).
 
 Professional maintainer. Clear, concise, technically accurate. At most one emoji
 per section.
+
+### Authorship (non-negotiable)
+
+- **NEVER generate GitHub content with a coding agent.** Issues, PRs, commits,
+  and release notes must be written by a human, not composed by a coding agent.
 
 ### Validation (before output)
 
