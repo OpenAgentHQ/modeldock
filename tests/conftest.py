@@ -82,10 +82,11 @@ class FakeCache(CachePort):
     def get_record(self, ref: ModelRef) -> Optional[dict]:
         return self.entries.get(self._key(ref))
 
-    def clean(self) -> List[str]:
-        removed = [f"{k}" for k in self.entries]
+    def clean(self, force: bool = False) -> List[str]:
+        removed = [k for k, v in self.entries.items() if force or not v.get("sha256")]
+        for k in removed:
+            del self.entries[k]
         self.cleaned.extend(removed)
-        self.entries.clear()
         return removed
 
     def status(self) -> List[dict]:

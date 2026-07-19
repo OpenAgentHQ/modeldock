@@ -179,6 +179,15 @@ def test_remove_wraps_sdk_error_as_download_error() -> None:
         runtime.remove(ModelRef.parse("llama3:latest"))
 
 
+def test_remove_cloud_model_fails_fast_without_daemon_call() -> None:
+    # Cloud/subscription models must not trigger a (hanging) daemon delete.
+    client = _PullClient([{"models": []}])
+    runtime = _runtime_with(client)
+    with pytest.raises(DownloadError):
+        runtime.remove(ModelRef.parse("glm-5.2:cloud"))
+    assert client.deleted == []
+
+
 def test_host_override_applied_at_client_build(monkeypatch: Any) -> None:
     built: dict[str, Any] = {}
 

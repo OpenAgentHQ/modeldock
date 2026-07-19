@@ -236,6 +236,15 @@ class ModelRef(BaseModel):
         """Return ``name:tag`` form used by runtimes."""
         return f"{self.name}:{self.tag}"
 
+    @property
+    def is_cloud(self) -> bool:
+        """True for cloud/subscription models (tag contains ``cloud``).
+
+        These cannot be installed, run, or removed through a local runtime and
+        must be short-circuited with a clear error instead of a daemon call.
+        """
+        return "cloud" in self.tag
+
     def __hash__(self) -> int:
         return hash((self.name, self.tag, self.backend))
 

@@ -25,8 +25,11 @@ def test_cache_service_status_and_clean(fake_cache: object) -> None:
     ref = ModelRef.parse("llama3")
     svc.record(ref, "latest", "abc", 10)
     assert len(svc.status()) == 1
-    removed = svc.clean()
-    assert removed
+    # Safe default keeps a valid entry.
+    assert svc.clean() == []
+    assert len(svc.status()) == 1
+    # force=True wipes it.
+    assert svc.clean(force=True)
     assert svc.status() == []
 
 
@@ -49,23 +52,44 @@ def test_filesystem_cache_persists_across_instances(tmp_path: Path) -> None:
     assert again.is_fresh(ref)
 
 
-def test_filesystem_cache_clean_removes_missing_artifacts(tmp_path: Path) -> None:
+def test_filesystem_cache_clean_keeps_valid_entries_by_default(tmp_path: Path) -> None:
     cache = FilesystemCache(tmp_path)
     ref = ModelRef.parse("llama3")
     cache.record(ref, "latest", "x", 1)
-    # No artifact file was written, so clean() should report it removed.
+    # Safe default: a valid entry is kept even though no .bin artifact exists.
+    assert cache.clean() == []
+    assert cache.is_fresh(ref)
+
+
+def test_filesystem_cache_clean_removes_corrupt_entries(tmp_path: Path) -> None:
+    cache = FilesystemCache(tmp_path)
+    ref = ModelRef.parse("llama3")
+    cache.record(ref, "latest", "x", 1)
+    # Corrupt an entry (drop sha256) to simulate a partial/corrupt record.
+    data = cache._read_manifest()
+    data["entries"]["llama3:latest"].pop("sha256")
+    cache._write_manifest(data)
     removed = cache.clean()
-    assert removed
+    assert removed == ["llama3:latest"]
     assert cache.status() == []
 
 
-def test_filesystem_cache_keeps_present_artifacts(tmp_path: Path) -> None:
+def test_filesystem_cache_clean_force_wipes_all(tmp_path: Path) -> None:
     cache = FilesystemCache(tmp_path)
     ref = ModelRef.parse("llama3")
     cache.record(ref, "latest", "x", 1)
-    (tmp_path / "llama3.bin").write_text("blob")
-    assert cache.clean() == []
-    assert cache.is_fresh(ref)
+    removed = cache.clean(force=True)
+    assert removed == ["llama3:latest"]
+    assert cache.status() == []
+
+
+def test_cache_service_clean_passes_force(tmp_path: Path) -> None:
+    cache = FilesystemCache(tmp_path)
+    ref = ModelRef.parse("llama3")
+    cache.record(ref, "latest", "x", 1)
+    svc = CacheService(cache)
+    assert svc.clean() == []
+    assert svc.clean(force=True) == ["llama3:latest"]
 
 
 def test_filesystem_cache_corrupt_manifest_raises(tmp_path: Path) -> None:

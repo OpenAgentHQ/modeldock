@@ -185,6 +185,16 @@ class OllamaRuntime(BaseRuntime):
         return self._ensure_client()
 
     def remove(self, ref: ModelRef) -> None:
+        # Cloud/subscription models are not managed by the local runtime; a
+        # delete call would block on the remote service. Fail fast instead.
+        if ref.is_cloud:
+            raise DownloadError(
+                ref.name,
+                reason=(
+                    f"{ref.qualified_name()} is a cloud/subscription model and "
+                    "cannot be removed locally."
+                ),
+            )
         client = self._ensure_client()
         try:
             client.delete(ref.qualified_name())

@@ -104,5 +104,9 @@ def test_cache_status_and_clean(cache_factory: Callable[[], List[CachePort]]) ->
         ref = ModelRef.parse("llama3")
         impl.record(ref, "latest", "sha", 10)
         assert len(impl.status()) == 1
+        # Safe default keeps valid entries.
         impl.clean()
+        assert len(impl.status()) == 1
+        # force=True wipes everything.
+        impl.clean(force=True)
         assert impl.status() == []
