@@ -115,6 +115,17 @@ modeldock config show
 modeldock config set auto_install true
 ```
 
+### Catalog Source
+
+ModelDock scrapes `ollama.com/library` for a live model catalog, cached locally
+for 24 hours. Set `catalog_source` in config or `MODELDOCK_CATALOG_SOURCE` env var:
+
+| Value | Behavior |
+|-------|----------|
+| `auto` | Try dynamic, fallback to bundled (default) |
+| `ollama` | Dynamic only — requires internet |
+| `bundled` | Static catalog.json only — fully offline |
+
 ---
 
 ## Supported Runtimes

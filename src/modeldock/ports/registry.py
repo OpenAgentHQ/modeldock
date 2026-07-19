@@ -1,7 +1,7 @@
 """RegistryPort — the contract for a searchable model catalog.
 
-Pure interface. Implementations: BundledRegistry (catalog.json), RemoteRegistry.
-See Architecture.md §9.
+Pure interface. Implementations: OllamaLibraryRegistry (live scraping),
+BundledRegistry (static fallback). See Architecture.md §9.
 """
 
 from __future__ import annotations

@@ -45,7 +45,7 @@ Send an email to **opensource@openagenthq.com** with:
 - Keep ModelDock and its dependencies up to date (`pip install -U modeldock`).
 - Use environment variables for any secrets; never hardcode them.
 - Download models only from trusted runtimes/registries.
-- Review the bundled `catalog.json` and any remote registry sources.
+- Review the dynamic catalog source (`ollama.com`) and any bundled registry sources.
 
 ### For Contributors
 

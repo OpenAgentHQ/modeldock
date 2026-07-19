@@ -48,7 +48,7 @@ installation verification, and loading through pluggable runtime adapters.
 │  Adapter / Infrastructure Layer (modeldock/adapters)         │
 │  - runtimes/ollama.py (first), lmstudio, llamacpp, jan,      │
 │    gpt4all, vllm (future)                                     │
-│  - registry/ (bundled catalog + remote registry)             │
+│  - registry/ (dynamic Ollama catalog + bundled fallback)      │
 │  - downloaders/ (http, ollama-native pull)                   │
 │  - cache/ (filesystem cache)                                 │
 │  - progress/ (rich, tqdm, silent)                            │
@@ -112,8 +112,9 @@ modeldock/
 │       │   │   ├── gpt4all.py
 │       │   │   └── vllm.py
 │       │   ├── registry/
-│       │   │   ├── bundled.py     # static catalog shipped in package
-│       │   │   └── remote.py      # optional remote registry fetch
+│       │   │   ├── ollama_library.py  # dynamic catalog from ollama.com (default)
+│       │   │   ├── bundled.py        # static fallback catalog (offline)
+│       │   │   └── remote.py         # optional remote registry fetch
 │       │   ├── downloaders/
 │       │   │   ├── http.py        # generic HTTP downloader
 │       │   │   └── ollama_pull.py # delegates to `ollama pull`/API
@@ -165,13 +166,13 @@ standard.
 | `ports/` | `typing.Protocol` interfaces defining *what* the system needs from the outside world (runtime, registry, downloader, cache, progress, events). No implementation. |
 | `core/` | Application services that implement use cases by composing ports. `LifecycleOrchestrator` is the brain behind `load()`. `ModelManager` is the high-level facade. |
 | `adapters/runtimes/` | Concrete runtime integrations. Each implements `RuntimePort`. Ollama ships first; others are stubs implementing the interface. |
-| `adapters/registry/` | Provides the searchable model catalog. `bundled.py` reads `catalog.json`; `remote.py` can refresh from a URL. |
+| `adapters/registry/` | Provides the searchable model catalog. `ollama_library.py` scrapes ollama.com for the full model list with auto-detected categories/capabilities; `bundled.py` is a static fallback; `remote.py` can refresh from a URL. |
 | `adapters/downloaders/` | Moves bytes. `ollama_pull.py` wraps Ollama's native pull; `http.py` is a generic fallback for runtimes that expose direct URLs. |
 | `adapters/cache/` | Tracks what is installed/downloaded so we never re-fetch. Filesystem manifest + content hashing. |
 | `adapters/progress/` | Pluggable progress reporters (rich, tqdm, silent) implementing `ProgressPort`. |
 | `cli/` | Thin delivery layer. Translates argv → core service calls. No business logic. |
 | `common/` | Config loading, logging bootstrap, platform/OS helpers, shared HTTP client, base errors. |
-| `data/catalog.json` | The bundled, versioned model registry (names, aliases, categories, capabilities, sizes, default tags). |
+| `data/catalog.json` | **Deprecated.** Static bundled model registry. Replaced by `OllamaLibraryRegistry` which scrapes ollama.com dynamically. Kept as offline fallback only. |
 
 ---
 
@@ -293,8 +294,8 @@ modeldock --help
   explicit runtime overrides.
 - **Format:** TOML for the file (human-friendly, stdlib `tomllib` in 3.11+).
 - **Model:** a frozen `Settings` dataclass/pydantic model: `default_backend`,
-  `cache_dir`, `registry_url`, `log_level`, `progress_style`, `auto_install`,
-  `ollama_host`, etc.
+  `cache_dir`, `registry_url`, `catalog_source`, `log_level`, `progress_style`,
+  `auto_install`, `ollama_host`, etc.
 - **Cross-platform paths:** resolved via `common/platform.py` using
   `platformdirs` (the de-facto standard for user/config/cache dirs across OSes).
 - **Validation:** config loaded through a validator; unknown keys warn, invalid
@@ -330,21 +331,35 @@ Goal: "never re-download installed models" + offline cache management.
 
 A **searchable, versioned catalog** decoupled from any runtime.
 
-- **Bundled catalog** (`data/catalog.json`): curated entries with
+- **Dynamic catalog** (`adapters/registry/ollama_library.py`): scrapes
+  `ollama.com/library` for the full model list. Auto-detects `Category` and
+  `Capability` from model names and HTML tags. Caches results locally
+  (`<cache_dir>/catalog_cache.json`) with 24-hour TTL for offline use.
+  This is the **default** registry.
+- **Bundled fallback** (`data/catalog.json`): static curated entries with
   `name, aliases[], category, capabilities[], default_tag,
   variants[{tag, params, size_bytes, min_ram}], description, backend_hints`.
-  Shipped with the package → works offline, zero-config.
+  Used as offline fallback when `catalog_source="bundled"` or when the
+  dynamic catalog fails and no cache exists.
 - **`RegistryPort`** abstraction: `search(query)`, `get(ref)`,
   `by_category(cat)`, `recommend(task)`, `list_all()`.
 - **Implementations:**
-  - `BundledRegistry` — reads `catalog.json` (default).
+  - `OllamaLibraryRegistry` — scrapes ollama.com, auto-detects metadata,
+    caches locally (default).
+  - `BundledRegistry` — reads `catalog.json` (offline fallback).
   - `RemoteRegistry` — optional fetch/refresh from a URL/JSON for community
     updates without a package release.
+- **Configuration:** `catalog_source` setting in `Settings` controls which
+  registry is used: `"auto"` (try dynamic, fallback to bundled), `"ollama"`
+  (dynamic only), `"bundled"` (static only).
 - **Alias resolution:** `domain/alias.py` maps friendly names (`llama3`) →
   canonical `ModelSpec`. Handles version shortcuts (`llama3:8b`),
   capability-based lookup (`recommend("vision")`), and "auto model selection."
-- **Extensibility:** new models added by editing `catalog.json` (or a remote
-  registry) — no code change. Future: community-contributed registry plugins.
+- **Auto-detection rules:**
+  - **Category:** name contains `embed` → EMBEDDING; `code` → CODING;
+    `vision`/`llava` → VISION; `r1`/`thinking` → REASONING; default → CHAT.
+  - **Capabilities:** HTML pills (`tools`, `vision`, `thinking`, `audio`,
+    `embedding`) map to `Capability` enum values. Default: CHAT + COMPLETION.
 
 ---
 
@@ -504,7 +519,7 @@ dependency-light. Runtime-native SDKs (e.g., `ollama` Python client) are
 |---|---|---|
 | Clean Architecture + ports | Maximum extensibility for 6 future runtimes; testable without Ollama | More files/abstraction upfront; slight "ceremony" for a small v1 |
 | Return runtime-native client from `load()` | Stay lightweight; don't reimplement inference | Less uniform cross-runtime inference API (acceptable — management is the product) |
-| Bundled `catalog.json` | Works offline, zero-config, beginner-friendly | Catalog can go stale; mitigated by optional `RemoteRegistry` refresh |
+| Dynamic catalog via HTML scraping | Always up-to-date with ollama.com; zero manual maintenance | Depends on ollama.com HTML structure; mitigated by 24h cache + bundled fallback |
 | Entry-point plugins | Third parties extend without forking | Slightly more discovery code; stdlib `importlib.metadata` is cheap |
 | `httpx` over `requests` | Streaming/resumable downloads, async-ready | Extra dep (small, well-maintained) |
 | Optional runtime SDK extras | Tiny base install | User may need `pip install modeldock[ollama]` (documented) |
@@ -516,7 +531,8 @@ dependency-light. Runtime-native SDKs (e.g., `ollama` Python client) are
 ## 17. Future Scalability Considerations
 
 - **New runtimes:** entry-point adapters — zero core changes (§14).
-- **New models:** catalog edits / remote registry — no code change.
+- **New models:** dynamic catalog scrapes ollama.com automatically; no manual
+  catalog edits needed. Models appear as soon as they're added to ollama.com.
 - **Concurrency:** `install_category` parallel downloads; service layer already
   async-ready (`httpx` async). Could add `asyncio` variants of the API
   (`md.aload(...)`) later without breaking sync API.

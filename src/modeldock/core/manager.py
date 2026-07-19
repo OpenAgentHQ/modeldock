@@ -11,7 +11,6 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 from modeldock.adapters.progress import make_progress
-from modeldock.adapters.registry import BundledRegistry
 from modeldock.adapters.runtimes.registry import RuntimeRegistry
 from modeldock.common.config import Settings
 from modeldock.common.errors import (
@@ -50,7 +49,7 @@ class ModelManager:
         cfg = self._config.settings
         self._backend = backend or cfg.default_backend
 
-        self._registry_port = registry or BundledRegistry()
+        self._registry_port = registry or self._resolve_registry(cfg)
         self._runtime_registry = RuntimeRegistry()
         self._runtime = runtime or self._resolve_runtime(self._backend, cfg)
 
@@ -70,6 +69,27 @@ class ModelManager:
         )
 
     # --- resolution helpers ----------------------------------------------
+
+    def _resolve_registry(self, cfg: Settings) -> RegistryPort:
+        """Resolve which registry adapter to use based on catalog_source."""
+        source = cfg.catalog_source
+        if source == "bundled":
+            from modeldock.adapters.registry.bundled import BundledRegistry
+
+            return BundledRegistry()
+        elif source == "ollama":
+            from modeldock.adapters.registry.ollama_library import OllamaLibraryRegistry
+
+            return OllamaLibraryRegistry(cache_dir=cfg.cache_dir)
+        else:  # "auto" — try ollama, fallback to bundled
+            try:
+                from modeldock.adapters.registry.ollama_library import OllamaLibraryRegistry
+
+                return OllamaLibraryRegistry(cache_dir=cfg.cache_dir)
+            except Exception:
+                from modeldock.adapters.registry.bundled import BundledRegistry
+
+                return BundledRegistry()
 
     def _resolve_runtime(self, backend: RuntimeBackend, cfg: Settings) -> RuntimePort:
         try:

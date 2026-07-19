@@ -158,7 +158,7 @@ python -m modeldock --help
 
 ## 8. Configuration During Development
 
-Config precedence (low → high): built-in defaults → bundled `catalog.json` →
+Config precedence (low → high): built-in defaults → dynamic catalog (ollama.com) →
 system config → user config (`~/.config/modeldock/config.toml` or
 `%APPDATA%\modeldock\config.toml`) → env vars (`MODELDOCK_*`) → runtime overrides.
 
@@ -200,7 +200,11 @@ See `AGENT.md` → "Extension Checklist" for the full list.
 
 ## 10. Adding Models to the Registry
 
-Edit `src/modeldock/data/catalog.json` (no code change). Each entry:
+Model discovery is **dynamic** — scraped live from `ollama.com/library`.
+New models appear automatically after catalog refresh (24h TTL cache).
+
+To add a model to the **bundled fallback**, edit `src/modeldock/data/catalog.json`
+(no code change). Each entry:
 
 ```json
 {

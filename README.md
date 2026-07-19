@@ -38,7 +38,7 @@ write `md.load("llama3")` and ModelDock handles the rest.
 - **Smart caching** — never re-download installed models; content-addressed offline cache.
 - **Extensible runtimes** — Ollama ships first; LM Studio, llama.cpp, Jan AI, GPT4All, vLLM are drop-in adapters.
 - **Cross-platform** — Windows, macOS, Linux via `platformdirs`.
-- **Zero-config, beginner-friendly** — works offline with a bundled catalog.
+- **Zero-config, beginner-friendly** — dynamic catalog from ollama.com with offline caching.
 
 ## Quick Start
 
@@ -128,8 +128,18 @@ Domain:      modeldock/domain/ (pure entities, no I/O)
 Ports:       modeldock/ports/  (typing.Protocol interfaces)
 Adapters:    modeldock/adapters/ (runtimes, registry, downloaders, cache, progress)
 Common:      modeldock/common/ (config, logging, platform, http, errors)
-Data:        modeldock/data/catalog.json (bundled model registry)
 ```
+
+### Catalog Source
+
+ModelDock scrapes `ollama.com/library` for a live model catalog, cached locally
+for 24 hours. Set `catalog_source` in config or `MODELDOCK_CATALOG_SOURCE` env var:
+
+| Value | Behavior |
+|-------|----------|
+| `auto` | Try dynamic, fallback to bundled (default) |
+| `ollama` | Dynamic only — requires internet |
+| `bundled` | Static catalog.json only — fully offline |
 
 See [Architecture.md](Architecture.md) for the full design contract.
 

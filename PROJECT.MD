@@ -294,6 +294,7 @@ model = load("llama3")
 
 ModelDock automatically:
 
+* **Scrapes a live catalog** from `ollama.com/library` (cached 24h, falls back to bundled)
 * Checks whether the model is already installed
 * Downloads the model if it is missing
 * Displays download progress

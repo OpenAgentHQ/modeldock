@@ -8,7 +8,7 @@ from modeldock.adapters.progress import (
     TqdmProgress,
     make_progress,
 )
-from modeldock.adapters.registry import BundledRegistry, RemoteRegistry
+from modeldock.adapters.registry import BundledRegistry, OllamaLibraryRegistry, RemoteRegistry
 from modeldock.adapters.runtimes import (
     BaseRuntime,
     Gpt4AllRuntime,
@@ -30,6 +30,7 @@ __all__ = [
     "VllmRuntime",
     "RuntimeRegistry",
     "BundledRegistry",
+    "OllamaLibraryRegistry",
     "RemoteRegistry",
     "HttpDownloader",
     "OllamaPullDownloader",
