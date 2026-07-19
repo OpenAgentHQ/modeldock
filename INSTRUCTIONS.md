@@ -251,3 +251,20 @@ per section.
 
 Confirm: Markdown renders correctly · file paths use `/` · code blocks fenced ·
 headings consistent · links formatted.
+
+### PowerShell Escaping
+
+When using `gh pr create` or `gh pr edit` with `--body` on Windows PowerShell,
+backticks are interpreted as escape characters and special characters get mangled.
+Always write the body to a temp file first, then use `--body-file`:
+
+```bash
+# Write body to file
+Set-Content -Path .tmp\pr_body.md -Value "## Summary`nYour content here"
+
+# Use file instead of inline --body
+gh pr create --body-file .tmp\pr_body.md
+gh pr edit 123 --body-file .tmp\pr_body.md
+```
+
+This preserves backticks, checkboxes, and special characters in the PR body.
