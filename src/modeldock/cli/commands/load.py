@@ -23,7 +23,9 @@ def load_cmd(
         mgr = ModelManager()
         name = f"{model}:{tag}" if tag != "latest" else model
         client = mgr.load(name, auto_install=auto_install)
+        status = mgr.runtime_status()
         typer.echo(f"Loaded {name} -> {type(client).__name__}")
+        typer.echo(f"Device:     {status.device.value}")
     except Exception as exc:  # noqa: BLE001 - top-level CLI boundary
         print_error(exc, debug)
         raise typer.Exit(code=1)  # noqa: B904

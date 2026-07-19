@@ -144,6 +144,35 @@ class ModelInfo(BaseModel):
         )
 
 
+class Device(str, Enum):
+    """Execution device a runtime reports for a loaded model.
+
+    ``UNKNOWN`` is used when the runtime cannot determine the device (e.g. the
+    model is not loaded, or the runtime exposes no device metadata).
+    """
+
+    GPU = "gpu"
+    CPU = "cpu"
+    UNKNOWN = "unknown"
+
+
+class RuntimeStatus(BaseModel):
+    """Runtime execution status, including the device a model runs on.
+
+    Pure data — no I/O. Adapters populate ``device`` from runtime metadata
+    (e.g. Ollama ``ps`` VRAM usage). See issue #11.
+    """
+
+    backend: RuntimeBackend
+    available: bool = False
+    device: Device = Device.UNKNOWN
+    loaded_models: List[str] = Field(default_factory=list)
+    details: str = ""
+
+    def __repr__(self) -> str:
+        return f"RuntimeStatus({self.backend.value}, {self.device.value})"
+
+
 class ModelRef(BaseModel):
     """A concrete reference to a model: name plus optional tag and backend."""
 

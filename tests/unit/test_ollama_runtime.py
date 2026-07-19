@@ -9,7 +9,7 @@ import pytest
 
 from modeldock.adapters.runtimes.ollama import OllamaRuntime
 from modeldock.common.errors import DownloadError, ModelNotInstalledError, RuntimeUnavailableError
-from modeldock.domain.model import ModelRef
+from modeldock.domain.model import Device, ModelRef, RuntimeStatus
 
 
 class _PullClient:
@@ -290,3 +290,73 @@ def test_run_single_prompt_wraps_sdk_error(monkeypatch: Any) -> None:
     result = runtime.run(ModelRef.parse("llama3"), prompt="hi")
     assert not result.success
     assert "boom" in result.error
+
+
+# --- device / GPU vs CPU detection (issue #11) ------------------------------
+
+
+class _PsClient:
+    """Fake ollama.Client exposing list() + ps() for device detection."""
+
+    def __init__(self, ps_models: List[dict[str, Any]]) -> None:
+        self._ps_models = ps_models
+
+    def list(self) -> dict[str, Any]:
+        return {"models": [{"name": "llama3:latest"}]}
+
+    def ps(self) -> dict[str, Any]:
+        return {"models": self._ps_models}
+
+
+def _runtime_with_ps(ps_models: List[dict[str, Any]]) -> OllamaRuntime:
+    runtime = OllamaRuntime()
+    runtime._client = _PsClient(ps_models=ps_models)
+    return runtime
+
+
+def test_status_reports_gpu_when_model_has_vram() -> None:
+    runtime = _runtime_with_ps([{"name": "llama3:latest", "size_vram": 4_500_000_000}])
+    status = runtime.status()
+    assert isinstance(status, RuntimeStatus)
+    assert status.available is True
+    assert status.device is Device.GPU
+
+
+def test_status_reports_cpu_when_no_vram() -> None:
+    runtime = _runtime_with_ps([{"name": "llama3:latest", "size_vram": 0}])
+    status = runtime.status()
+    assert status.available is True
+    assert status.device is Device.CPU
+
+
+def test_status_unknown_when_no_models_loaded() -> None:
+    runtime = _runtime_with_ps([])
+    status = runtime.status()
+    assert status.device is Device.UNKNOWN
+
+
+def test_status_unknown_when_ps_raises() -> None:
+    class _PsBoomClient:
+        def list(self) -> dict[str, Any]:
+            return {"models": [{"name": "llama3:latest"}]}
+
+        def ps(self) -> dict[str, Any]:
+            raise RuntimeError("ps unavailable")
+
+    runtime = OllamaRuntime()
+    runtime._client = _PsBoomClient()
+    status = runtime.status()
+    # Best-effort: device unknown, but availability still reported.
+    assert status.available is True
+    assert status.device is Device.UNKNOWN
+
+
+def test_status_unavailable_when_daemon_down() -> None:
+    class _DownClient:
+        def list(self) -> dict[str, Any]:
+            raise RuntimeError("connection refused")
+
+    runtime = _runtime_with(_DownClient())
+    status = runtime.status()
+    assert status.available is False
+    assert status.device is Device.UNKNOWN

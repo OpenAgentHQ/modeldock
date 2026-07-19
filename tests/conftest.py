@@ -13,6 +13,7 @@ import pytest
 from modeldock.domain.model import (
     Capability,
     Category,
+    Device,
     ModelRef,
     ModelSpec,
     RuntimeBackend,
@@ -21,7 +22,7 @@ from modeldock.ports.cache import CachePort
 from modeldock.ports.events import EventPort
 from modeldock.ports.progress import ProgressPort
 from modeldock.ports.registry import RegistryPort
-from modeldock.ports.runtime import PullResult, RuntimePort
+from modeldock.ports.runtime import PullResult, RuntimePort, RuntimeStatus
 
 
 class FakeProgress(ProgressPort):
@@ -141,6 +142,13 @@ class FakeRuntime(RuntimePort):
 
     def default_tag_for(self, spec: ModelSpec) -> str:
         return spec.default_tag
+
+    def status(self) -> RuntimeStatus:
+        return RuntimeStatus(
+            backend=self.backend,
+            available=self._available,
+            device=Device.UNKNOWN,
+        )
 
     def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> Any:
         from modeldock.ports.runtime import RunResult

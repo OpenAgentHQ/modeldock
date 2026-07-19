@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, List, Optional, Protocol, runtime_checkable
 
-from modeldock.domain.model import ModelRef, ModelSpec, RuntimeBackend
+from modeldock.domain.model import ModelRef, ModelSpec, RuntimeBackend, RuntimeStatus
 
 
 @runtime_checkable
@@ -47,6 +47,10 @@ class RuntimePort(Protocol):
 
     def default_tag_for(self, spec: ModelSpec) -> str:
         """Resolve the default variant tag for a model spec."""
+        ...
+
+    def status(self) -> RuntimeStatus:
+        """Report runtime availability and the execution device (GPU/CPU)."""
         ...
 
     def run(self, ref: ModelRef, prompt: Optional[str] = None, **opts: Any) -> RunResult:

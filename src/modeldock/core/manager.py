@@ -118,6 +118,10 @@ class ModelManager:
         """Return all catalog categories."""
         return self._registry.categories()
 
+    def runtime_status(self) -> Any:
+        """Report the active runtime's availability and execution device."""
+        return self._runtime.status()
+
     def recommend(self, task: str) -> List[Any]:
         """Recommend models for a task."""
         return self._registry.recommend(task)
