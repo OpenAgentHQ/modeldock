@@ -4,6 +4,16 @@ All notable changes to ModelDock will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-07-19
+
+Patch fix for `catalog.json` not being included in the installed package.
+
+### Fixed
+
+- **Catalog data missing** — added `[tool.setuptools.package-data]` to `pyproject.toml` so `catalog.json` is bundled in the wheel/sdist. Previously the file was silently excluded, causing `ModelNotFoundError: 'catalog.json not found in package data'` at runtime.
+
+---
+
 ## [0.1.1] - 2026-07-19
 
 Patch release hardening the Ollama runtime and SDK ahead of broader adoption.
@@ -71,5 +81,6 @@ This project follows [Semantic Versioning](https://semver.org/):
 
 ## Links
 
+[0.1.2]: https://github.com/OpenAgentHQ/modeldock/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/OpenAgentHQ/modeldock/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/OpenAgentHQ/modeldock/releases/tag/v0.1.0

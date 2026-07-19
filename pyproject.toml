@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "modeldock"
-version = "0.1.1"
+version = "0.1.2"
 description = "Lightweight, Python-first model manager for local LLMs (the package manager for local AI models)."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -55,6 +55,9 @@ ollama = "modeldock.adapters.runtimes.ollama:OllamaRuntime"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+modeldock = ["data/catalog.json"]
 
 [tool.ruff]
 line-length = 100
