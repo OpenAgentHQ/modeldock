@@ -36,7 +36,7 @@ Patch release hardening the Ollama runtime and SDK ahead of broader adoption.
 
 ### Contributors
 
-- @himan
+- @himanshu231204
 
 ---
 
