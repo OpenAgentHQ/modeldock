@@ -105,7 +105,6 @@ def _detect_capabilities(name: str, html_caps: List[str]) -> List[Capability]:
 
 # Patterns for extracting model data from ollama.com/library HTML
 _MODEL_LINK_RE = re.compile(r'<a[^>]*href="/library/([^"]+)"[^>]*>', re.IGNORECASE)
-_UNUSED_MODEL_NAME_RE = re.compile(r"<h2[^>]*>([^<]+)</h2>", re.IGNORECASE)
 _MODEL_DESC_RE = re.compile(r"<p[^>]*>([^<]+)</p>", re.IGNORECASE)
 _CAPABILITY_PILL_RE = re.compile(
     r'<span[^>]*class="[^"]*tag[^"]*"[^>]*>([^<]+)</span>', re.IGNORECASE
