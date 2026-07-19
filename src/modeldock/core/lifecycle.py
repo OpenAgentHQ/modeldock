@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from modeldock.common.errors import ModelNotInstalledError
+from modeldock.common.errors import ModelNotFoundError, ModelNotInstalledError
 from modeldock.common.logging import get_logger
 from modeldock.domain.model import ModelRef, ModelSpec
 from modeldock.ports.cache import CachePort
@@ -59,7 +59,16 @@ class LifecycleOrchestrator:
         return self._runtime.get_model_client(ref)
 
     def _resolve(self, ref: ModelRef) -> ModelSpec:
-        return self._registry.get(ref)
+        """Resolve a model spec, falling back to a local ref when uncatalogued.
+
+        A model that is installed locally but missing from the bundled catalog
+        (e.g. pulled outside ModelDock) still resolves via ``ModelSpec.from_ref``
+        so load/install can proceed. Only an empty/invalid reference fails.
+        """
+        try:
+            return self._registry.get(ref)
+        except ModelNotFoundError:
+            return ModelSpec.from_ref(ref)
 
 
 __all__ = ["LifecycleOrchestrator"]

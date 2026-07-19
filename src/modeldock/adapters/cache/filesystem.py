@@ -91,6 +91,10 @@ class FilesystemCache:
         data = self._read_manifest()
         return list(data.get("entries", {}).values())
 
+    def path(self) -> str:
+        """Return the cache directory path."""
+        return str(self._cache_dir)
+
     # --- content hashing helper -------------------------------------------
 
     @staticmethod
