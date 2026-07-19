@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "modeldock"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lightweight, Python-first model manager for local LLMs (the package manager for local AI models)."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "OpenAgentHQ" }]
+authors = [{ name = "Himanshu kumar" }, { name = "OpenAgentHQ" }]
 keywords = ["llm", "models", "ollama", "local-ai", "model-management"]
 classifiers = [
     "Development Status :: 3 - Alpha",

@@ -156,7 +156,7 @@ progress_style  = "rich"
 
 | Runtime | Status |
 |---|---|
-| Ollama | Shipped (first) |
+| Ollama | ✅ Fully supported |
 | LM Studio, llama.cpp, Jan AI, GPT4All, vLLM | Planned adapters |
 
 ## Documentation
@@ -195,6 +195,10 @@ public issues for security problems.
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
+
+## Author
+
+ModelDock is created and maintained by **Himanshu kumar** (OpenAgentHQ).
 
 ## License
 
