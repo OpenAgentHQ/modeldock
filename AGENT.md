@@ -20,8 +20,7 @@ before writing any code.
 - **First runtime:** Ollama (shipped). Future: LM Studio, llama.cpp, Jan AI,
   GPT4All, vLLM (added as adapters, no core changes)
 - **Design style:** Clean Architecture + SOLID + Dependency Inversion
-- **Status:** Greenfield. No source code yet — only docs (`PROJECT.MD`,
-  `Architecture.md`, `README.md`, `LICENSE`).
+- **Status:** Active development. Dynamic catalog from ollama.com.
 
 ---
 
@@ -137,7 +136,6 @@ Domain:      modeldock/domain/ (pure entities, no I/O)
 Ports:       modeldock/ports/  (typing.Protocol interfaces)
 Adapters:    modeldock/adapters/ (runtimes, registry, downloaders, cache, progress)
 Common:      modeldock/common/ (config, logging, platform, http, errors)
-Data:        modeldock/data/catalog.json (bundled model registry)
 ```
 
 See `Architecture.md` §2 for the full tree and §3 for per-module responsibilities.

@@ -93,7 +93,7 @@ src/modeldock/
   adapters/    runtimes, registry, downloaders, cache, progress
   cli/         Typer CLI, thin wrappers over core
   common/      config, logging, platform, http, errors
-  data/        catalog.json (bundled registry)
+  data/        (removed — catalog is now dynamic from ollama.com)
 ```
 
 **Dependency direction (never violate):**
@@ -147,7 +147,11 @@ Targets: ruff clean, `mypy --strict` clean, bandit clean, ≥80% coverage.
 
 ## 7. Adding Models
 
-Edit `src/modeldock/data/catalog.json`. No code change. See
+Model discovery is now **dynamic** — scraped live from `ollama.com/library`.
+New models appear automatically after catalog refresh (24h TTL cache).
+
+To add a model to the **bundled fallback**, edit `src/modeldock/data/catalog.json`
+(temporarily restored for offline fallback only). See
 [`Development.md`](./Development.md) §10 for the entry shape.
 
 ---

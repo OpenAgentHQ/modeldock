@@ -4,6 +4,43 @@ All notable changes to ModelDock will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-07-19
+
+Dynamic catalog: replaced static `catalog.json` with live scraping of ollama.com.
+
+### Added
+
+- `OllamaLibraryRegistry` adapter — scrapes `ollama.com/library` for the full model list, auto-detects categories and capabilities, and caches locally for offline use
+- `catalog_source` config setting (`"auto"` | `"ollama"` | `"bundled"`) to control which registry is used
+- `MODELDOCK_CATALOG_SOURCE` environment variable support
+- Local catalog cache (`<cache_dir>/catalog_cache.json`) with 24-hour TTL
+
+### Changed
+
+- `ModelManager` now defaults to `OllamaLibraryRegistry` (dynamic) instead of `BundledRegistry` (static)
+- Auto-detection rules: model name patterns and HTML capability tags determine `Category` and `Capability`
+- `Architecture.md` updated to reflect dynamic catalog design
+
+### Removed
+
+- Deleted `src/modeldock/data/catalog.json` — no longer needed
+- Removed `[tool.setuptools.package-data]` from `pyproject.toml`
+
+### Deprecated
+
+- `BundledRegistry` is now a fallback only, used when `catalog_source="bundled"` or when the dynamic catalog fails and no cache exists
+
+### Tests
+
+- 32 new tests for `OllamaLibraryRegistry` (HTML scraping, auto-detection, cache, network fallback)
+- BundledRegistry tests skipped when `catalog.json` is not present
+
+### Contributors
+
+- @himanshu231204
+
+---
+
 ## [0.1.2] - 2026-07-19
 
 Patch fix for `catalog.json` not being included in the installed package.
@@ -81,6 +118,7 @@ This project follows [Semantic Versioning](https://semver.org/):
 
 ## Links
 
+[0.1.3]: https://github.com/OpenAgentHQ/modeldock/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/OpenAgentHQ/modeldock/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/OpenAgentHQ/modeldock/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/OpenAgentHQ/modeldock/releases/tag/v0.1.0

@@ -14,7 +14,7 @@ inference itself; it orchestrates runtimes (starting with Ollama).
 
 - **Repo:** https://github.com/OpenAgentHQ/modeldock.git
 - **Language:** Python 3.9–3.12 · `src/` layout · pure-Python, minimal deps
-- **Status:** Greenfield (docs only; no source yet)
+- **Status:** Active development. Dynamic catalog from ollama.com.
 
 ---
 
@@ -41,7 +41,7 @@ inference itself; it orchestrates runtimes (starting with Ollama).
 3. **Extensible by design.** New runtimes = one adapter class + one entry-point
    line. No core/CLI/API changes.
 4. **Zero-config, beginner-friendly, cross-platform.** `platformdirs` for
-   paths; works offline via bundled `catalog.json`.
+   paths; works offline via cached catalog from ollama.com.
 5. **Typed errors, library-friendly logging.** Never `basicConfig()` at import;
    raise `ModelDockError` subclasses with actionable context.
 
@@ -56,7 +56,6 @@ Domain:      modeldock/domain/ (pure entities, no I/O)
 Ports:       modeldock/ports/  (typing.Protocol interfaces)
 Adapters:    modeldock/adapters/ (runtimes, registry, downloaders, cache, progress)
 Common:      modeldock/common/ (config, logging, platform, http, errors)
-Data:        modeldock/data/catalog.json (bundled model registry)
 ```
 
 **Key ports:** `RuntimePort`, `RegistryPort`, `DownloaderPort`, `CachePort`,

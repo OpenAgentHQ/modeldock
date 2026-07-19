@@ -33,6 +33,7 @@ class Settings(BaseModel):
     default_backend: RuntimeBackend = RuntimeBackend.OLLAMA
     cache_dir: Path = Field(default_factory=default_cache_dir)
     registry_url: Optional[str] = None
+    catalog_source: str = "auto"  # "auto" | "ollama" | "bundled"
     log_level: str = "ERROR"
     progress_style: str = "rich"
     auto_install: bool = False
@@ -58,11 +59,22 @@ class Settings(BaseModel):
             )
         return value
 
+    @field_validator("catalog_source")
+    @classmethod
+    def _validate_catalog_source(cls, value: str) -> str:
+        allowed = {"auto", "ollama", "bundled"}
+        if value not in allowed:
+            raise ConfigError(
+                f"Invalid catalog_source {value!r}; expected one of {sorted(allowed)}"
+            )
+        return value
+
     def to_env_overrides(self) -> Dict[str, str]:
         """Return the env-var form of these settings (for subprocess/debug)."""
         return {
             f"{_ENV_PREFIX}LOG_LEVEL": self.log_level,
             f"{_ENV_PREFIX}DEFAULT_BACKEND": self.default_backend.value,
+            f"{_ENV_PREFIX}CATALOG_SOURCE": self.catalog_source,
             f"{_ENV_PREFIX}AUTO_INSTALL": str(self.auto_install).lower(),
             f"{_ENV_PREFIX}CACHE_DIR": str(self.cache_dir),
         }
@@ -101,6 +113,8 @@ def _apply_mapping(settings: Settings, data: Dict[str, Any]) -> None:
         settings.cache_dir = Path(str(data["cache_dir"]))
     if "registry_url" in data:
         settings.registry_url = data["registry_url"] or None
+    if "catalog_source" in data and data["catalog_source"]:
+        settings.catalog_source = str(data["catalog_source"])
     if "log_level" in data and data["log_level"]:
         settings.log_level = _coerce_log_level(data["log_level"])
     if "progress_style" in data and data["progress_style"]:
@@ -147,6 +161,7 @@ def load_settings(
         f"{_ENV_PREFIX}DEFAULT_BACKEND": "default_backend",
         f"{_ENV_PREFIX}CACHE_DIR": "cache_dir",
         f"{_ENV_PREFIX}REGISTRY_URL": "registry_url",
+        f"{_ENV_PREFIX}CATALOG_SOURCE": "catalog_source",
         f"{_ENV_PREFIX}LOG_LEVEL": "log_level",
         f"{_ENV_PREFIX}PROGRESS_STYLE": "progress_style",
         f"{_ENV_PREFIX}OLLAMA_HOST": "ollama_host",
