@@ -77,12 +77,21 @@ class BaseRuntime:
         return Device.UNKNOWN
 
     def pull(self, ref: ModelRef, progress: Any = None) -> PullResult:
-        """Normalized pull: checks availability, delegates to ``_do_pull``."""
+        """Normalized pull: checks availability, delegates to ``_do_pull``.
+
+        Idempotent: if the model is already installed, return a successful
+        ``PullResult`` without re-downloading. This keeps repeated
+        ``install()``/``load()`` calls cheap and avoids redundant network
+        fetches (core "package manager" behavior).
+        """
         if not self.is_available():
             raise RuntimeUnavailableError(
                 self.backend.value,
                 hint="Install the runtime or choose another backend.",
             )
+        if self.is_installed(ref):
+            self._logger.info("Already installed, skipping pull: %s", ref.qualified_name())
+            return PullResult(ref=ref, success=True, already_present=True)
         self._logger.info("Pulling %s", ref.qualified_name())
         try:
             return self._do_pull(ref, progress)

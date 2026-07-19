@@ -75,6 +75,7 @@ class PullResult:
         sha256: Optional[str] = None,
         bytes_downloaded: int = 0,
         error: Optional[str] = None,
+        already_present: bool = False,
     ) -> None:
         self.ref = ref
         self.success = success
@@ -82,6 +83,7 @@ class PullResult:
         self.sha256 = sha256
         self.bytes_downloaded = bytes_downloaded
         self.error = error
+        self.already_present = already_present
 
     def __repr__(self) -> str:
         state = "ok" if self.success else f"failed({self.error})"
