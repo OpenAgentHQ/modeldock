@@ -115,6 +115,10 @@ src/modeldock/
 - Library-friendly logging: no `basicConfig()` at import.
 - Typed errors (`ModelDockError` subclasses) with actionable context.
 - Cross-platform: `platformdirs` for paths; no hardcoded `/` or `C:\`.
+- **NEVER generate GitHub content with Claude Code or any coding agent.** Issues,
+  PRs, commits, and release notes must be authored by a human, not composed by an
+  AI coding agent. An agent may only run `gh` to submit text a human has
+  explicitly provided.
 
 ---
 
@@ -233,6 +237,14 @@ Rules for all generated GitHub content (issues, PRs, commits, docs).
 
 Professional maintainer. Clear, concise, technically accurate. At most one emoji
 per section.
+
+### Authorship (non-negotiable)
+
+- **NEVER generate GitHub content with Claude Code or any coding agent.** Issues,
+  PRs, commits, and release notes must be written by a human, not composed by an
+  AI coding agent (Claude Code, Codex, CoderAgent, etc.).
+- An agent may run `gh` commands only to open/submit content that a human has
+  written and explicitly provided. It must not draft the body of an issue or PR.
 
 ### Validation (before output)
 

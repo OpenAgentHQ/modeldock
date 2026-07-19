@@ -55,6 +55,11 @@ before writing any code.
     (see `common/errors.py`). Every error must carry actionable context.
  8. **Cross-platform by default.** Use `platformdirs` for paths, avoid
     hardcoded `/` or `C:\`, avoid OS-specific syscalls without guards.
+ 9. **NEVER generate GitHub content with Claude Code or any coding agent.**
+    Issues, PRs, commits, and release notes must NOT be authored or drafted by
+    an AI coding agent (Claude Code, Codex, CoderAgent, etc.). The agent may
+    run `gh` commands only to open/submit content that a human has written and
+    explicitly provided. Do not let an agent compose the body of an issue or PR.
 
 ---
 
@@ -116,9 +121,13 @@ before writing any code.
 4. **NEVER assume features not in `PROJECT.MD`.** Build only what is specified.
 5. **ALWAYS communicate through interfaces** (`ports/`), not concrete adapters.
 6. **NEVER develop on `main`** — always create a PR for review.
-7. **NEVER let CLI-framework objects cross into `common/`/`core`/`domain`.**
-   The CLI must resolve and validate every option to a plain value before any
-   downstream call; `configure_logging()` falls back to `INFO` on bad input.
+ 7. **NEVER let CLI-framework objects cross into `common/`/`core`/`domain`.**
+    The CLI must resolve and validate every option to a plain value before any
+    downstream call; `configure_logging()` falls back to `INFO` on bad input.
+ 8. **NEVER generate GitHub content with Claude Code or any coding agent.**
+    Issues, PRs, commits, and release notes must be authored by a human, not
+    composed by an AI coding agent. An agent may only run `gh` to submit text a
+    human has explicitly provided.
 
 ---
 
