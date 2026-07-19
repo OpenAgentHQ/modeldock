@@ -54,7 +54,7 @@ def configure(
 def load(name: str, backend: Optional[str] = None, auto_install: Optional[bool] = None) -> Any:
     """Auto-install if missing, then return a ready-to-use client."""
     if backend is not None:
-        return _manager().load(name, auto_install=auto_install)
+        return Manager(backend=backend).load(name, auto_install=auto_install)
     return _manager().load(name, auto_install=auto_install)
 
 
@@ -90,27 +90,48 @@ def recommend(task: str) -> List[Any]:
 
 def install(name: str, backend: Optional[str] = None) -> ModelRef:
     """Explicit download."""
+    if backend is not None:
+        return Manager(backend=backend).install(name)
     return _manager().install(name)
 
 
 def install_category(category: str, backend: Optional[str] = None) -> List[ModelRef]:
     """Bulk install by category."""
+    if backend is not None:
+        return Manager(backend=backend).install_category(category)
     return _manager().install_category(category)
 
 
 def update(name: str, backend: Optional[str] = None) -> ModelRef:
     """Pull a newer tag."""
+    if backend is not None:
+        return Manager(backend=backend).update(name)
     return _manager().update(name)
 
 
 def remove(name: str, backend: Optional[str] = None) -> None:
     """Uninstall."""
+    if backend is not None:
+        Manager(backend=backend).remove(name)
+        return
     _manager().remove(name)
 
 
 def verify(name: str, backend: Optional[str] = None) -> bool:
     """Integrity check."""
+    if backend is not None:
+        return Manager(backend=backend).verify(name)
     return _manager().verify(name)
+
+
+def run(name: str, prompt: Optional[str] = None, backend: Optional[str] = None, **opts: Any) -> Any:
+    """Run an interactive session for a model in the active runtime.
+
+    With ``prompt`` runs a single completion; without it, drops into a REPL.
+    """
+    if backend is not None:
+        return Manager(backend=backend).run(name, prompt=prompt, **opts)
+    return _manager().run(name, prompt=prompt, **opts)
 
 
 class _CacheFacade:
@@ -167,6 +188,7 @@ __all__ = [
     "update",
     "remove",
     "verify",
+    "run",
     "cache",
     "configure",
     "Manager",

@@ -159,3 +159,37 @@ def test_install_falls_back_for_installed_uncatalogued_model() -> None:
 def test_modelref_and_backend_exports() -> None:
     assert md.ModelRef.parse("llama3:8b").qualified_name() == "llama3:8b"
     assert md.RuntimeBackend.from_value("ollama") == RuntimeBackend.OLLAMA
+
+
+def test_sdk_run_via_fake_manager() -> None:
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    runtime = FakeRuntime()
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    result = mgr.run("llama3", prompt="hi")
+    assert result.success is True
+
+
+def test_sdk_run_exported() -> None:
+    assert hasattr(md, "run")
+    assert "run" in md.__all__
+
+
+def test_load_routes_backend_to_manager() -> None:
+    from modeldock.domain.model import RuntimeBackend
+
+    # Manager(backend=...) sets the active backend without touching a runtime.
+    mgr = md.Manager(backend="ollama")
+    assert mgr._backend == RuntimeBackend.OLLAMA
+
+
+def test_info_surfaces_installed_tags_for_catalog_model() -> None:
+    from modeldock.domain.model import ModelRef
+    from tests.conftest import FakeCache, FakeRegistry, FakeRuntime
+
+    ref = ModelRef.parse("llama3:latest")
+    runtime = FakeRuntime(installed=[ref])
+    mgr = md.ModelManager(runtime=runtime, registry=FakeRegistry(), cache=FakeCache())
+    info = mgr.info("llama3")
+    assert info.installed is True
+    assert info.installed_tags == ["latest"]
