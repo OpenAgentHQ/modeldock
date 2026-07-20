@@ -8,46 +8,55 @@ ModelDock is a **management layer** that sits above local model runtimes. It doe
 
 Dependencies point inward — Clean Architecture with SOLID principles:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Interface / Delivery Layer                                   │
-│  - Python SDK (modeldock/__init__.py public API)              │
-│  - CLI (modeldock/cli)  → Typer                               │
-└─────────────────────────────────────────────────────────────┘
-                          │ uses
-┌─────────────────────────────────────────────────────────────┐
-│  Application / Use-Case Layer (modeldock/core)                │
-│  - ModelService, RegistryService, DownloadService,           │
-│    CacheService, ConfigService, LifecycleOrchestrator        │
-│  - Orchestrates "load missing → download → verify → load"    │
-└─────────────────────────────────────────────────────────────┘
-                          │ depends on (abstractions)
-┌─────────────────────────────────────────────────────────────┐
-│  Domain Layer (modeldock/domain) — pure, no I/O               │
-│  - Model, ModelSpec, ModelAlias, Capability, Category,       │
-│    RuntimeBackend, DownloadStatus, exceptions                 │
-└─────────────────────────────────────────────────────────────┘
-                          │ implemented by
-┌─────────────────────────────────────────────────────────────┐
-│  Port / Abstraction Layer (modeldock/ports)                   │
-│  - RuntimePort, RegistryPort, DownloaderPort, CachePort,     │
-│    ProgressPort, EventPort                                    │
-└─────────────────────────────────────────────────────────────┘
-                          │ adapters
-┌─────────────────────────────────────────────────────────────┐
-│  Adapter / Infrastructure Layer (modeldock/adapters)         │
-│  - runtimes/ollama.py (first), lmstudio, llamacpp, jan,      │
-│    gpt4all, vllm (future)                                     │
-│  - registry/ (dynamic Ollama catalog + bundled fallback)      │
-│  - downloaders/ (http, ollama-native pull)                   │
-│  - cache/ (filesystem cache)                                 │
-│  - progress/ (rich, tqdm, silent)                            │
-└─────────────────────────────────────────────────────────────┘
-                          │
-┌─────────────────────────────────────────────────────────────┐
-│  Cross-cutting (modeldock/common)                            │
-│  - config, logging, errors, platform utils, http client      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Interface["Interface / Delivery Layer"]
+        SDK["Python SDK<br/>modeldock/__init__.py"]
+        CLI["CLI<br/>modeldock/cli → Typer"]
+    end
+
+    subgraph Application["Application / Use-Case Layer"]
+        CORE["modeldock/core/<br/>ModelManager · LifecycleOrchestrator<br/>RegistryService · DownloadService<br/>CacheService · ConfigService"]
+    end
+
+    subgraph Domain["Domain Layer — pure, no I/O"]
+        DOMAIN["modeldock/domain/<br/>Model · ModelSpec · ModelAlias<br/>Capability · Category<br/>RuntimeBackend · Exceptions"]
+    end
+
+    subgraph Ports["Port / Abstraction Layer"]
+        PORTS["modeldock/ports/<br/>RuntimePort · RegistryPort<br/>DownloaderPort · CachePort<br/>ProgressPort · EventPort"]
+    end
+
+    subgraph Adapters["Adapter / Infrastructure Layer"]
+        RUNTIMES["runtimes/<br/>ollama · lmstudio<br/>llamacpp · jan · gpt4all · vllm"]
+        REGISTRY["registry/<br/>dynamic catalog + bundled fallback"]
+        DOWNLOADERS["downloaders/<br/>http · ollama-native pull"]
+        CACHE["cache/<br/>filesystem cache"]
+        PROGRESS["progress/<br/>rich · tqdm · silent"]
+    end
+
+    subgraph Common["Cross-cutting"]
+        COMMON["modeldock/common/<br/>config · logging · errors<br/>platform utils · http client"]
+    end
+
+    SDK --> CORE
+    CLI --> CORE
+    CORE --> PORTS
+    CORE --> DOMAIN
+    PORTS --> RUNTIMES
+    PORTS --> REGISTRY
+    PORTS --> DOWNLOADERS
+    PORTS --> CACHE
+    PORTS --> PROGRESS
+    COMMON -.-> CORE
+    COMMON -.-> ADAPTERS
+
+    style Interface fill:#37474f,stroke:#26a69a,color:#fff
+    style Application fill:#455a64,stroke:#26a69a,color:#fff
+    style Domain fill:#546e7a,stroke:#26a69a,color:#fff
+    style Ports fill:#607d8b,stroke:#26a69a,color:#fff
+    style Adapters fill:#78909c,stroke:#26a69a,color:#fff
+    style Common fill:#90a4ae,stroke:#26a69a,color:#fff
 ```
 
 ---
