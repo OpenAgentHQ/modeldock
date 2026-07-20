@@ -21,6 +21,8 @@
   <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/v/modeldock.svg" alt="PyPI version"></a>
   <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/pypi/dm/modeldock.svg" alt="Downloads"></a>
   <a href="https://pypi.org/project/modeldock/"><img src="https://img.shields.io/badge/PyPI-modeldock-blue" alt="PyPI"></a>
+
+  [![PyPI Downloads](https://static.pepy.tech/personalized-badge/modeldock?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/modeldock)
 </p>
 
 ---
