@@ -53,6 +53,7 @@ Send an email to **opensource@openagenthq.com** with:
 - Never commit secrets or `.env` files (see `.gitignore`).
 - Raise typed `ModelDockError` subclasses — never swallow errors silently.
 - Run `bandit -r src` as part of local checks.
+- Treat output from adapters, particularly from the cli/core/adapters/docs module, as untrusted; never execute or evaluate it directly.
 
 ## Contact
 
