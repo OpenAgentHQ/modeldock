@@ -1,0 +1,253 @@
+/* ── ModelDock Documentation — Custom Styles ─────────────────────────────────
+   Editorial, industrial aesthetic. Clean typography hierarchy, deliberate
+   whitespace, and subtle atmosphere that reinforces the "package manager"
+   identity.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Root Variables ──────────────────────────────────────────────────────── */
+
+:root {
+  --md-primary-fg-color: #455a64;
+  --md-primary-fg-color--light: #607d8b;
+  --md-primary-fg-color--dark: #263238;
+  --md-accent-fg-color: #26a69a;
+  --md-accent-fg-color--transparent: rgba(38, 166, 154, 0.1);
+  --md-default-fg-color: #37474f;
+  --md-default-bg-color: #ffffff;
+  --md-typeset-color: #37474f;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #607d8b;
+  --md-primary-fg-color--light: #90a4ae;
+  --md-primary-fg-color--dark: #455a64;
+  --md-accent-fg-color: #4db6ac;
+  --md-accent-fg-color--transparent: rgba(77, 182, 172, 0.1);
+  --md-default-fg-color: #cfd8dc;
+  --md-default-bg-color: #1a1a2e;
+  --md-typeset-color: #cfd8dc;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+
+.md-typeset h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.md-typeset h2 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-bottom: 2px solid var(--md-accent-fg-color);
+  padding-bottom: 0.3em;
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── Hero / Landing Page ─────────────────────────────────────────────────── */
+
+.md-typeset .hero-banner {
+  background: linear-gradient(135deg, #263238 0%, #37474f 50%, #455a64 100%);
+  color: #eceff1;
+  padding: 4rem 2rem;
+  margin: -1.5rem -1rem 2rem -1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .hero-banner {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
+}
+
+.hero-banner h1 {
+  font-size: 2.8rem;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+}
+
+.hero-banner p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── Feature Grid ────────────────────────────────────────────────────────── */
+
+.md-typeset .feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.md-typeset .feature-card {
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.md-typeset .feature-card:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .feature-card {
+  border-color: #37474f;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .feature-card:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.feature-card p {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+/* ── Code Blocks ─────────────────────────────────────────────────────────── */
+
+.md-typeset code {
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-size: 0.85em;
+}
+
+.md-typeset pre > code {
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* ── Admonitions ─────────────────────────────────────────────────────────── */
+
+.md-typeset .admonition {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+.md-typeset .admonition-title {
+  font-weight: 600;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+
+.md-typeset table:not([class]) {
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--md-primary-fg-color);
+  color: #ffffff;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background-color: #263238;
+  color: #eceff1;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+
+.md-typeset .tabbed-set {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+}
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
+
+.md-nav__link {
+  font-size: 0.88rem;
+}
+
+.md-nav__link--active {
+  font-weight: 600;
+  color: var(--md-accent-fg-color) !important;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.md-footer {
+  background-color: var(--md-primary-fg-color--dark);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  scrollbar-width: thin;
+}
+
+/* ── Content ─────────────────────────────────────────────────────────────── */
+
+.md-content {
+  max-width: 900px;
+}
+
+/* ── Flow Diagrams ───────────────────────────────────────────────────────── */
+
+.md-typeset .flow-diagram {
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  font-family: var(--md-code-font-family);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .flow-diagram {
+  border-color: #37474f;
+}
+
+/* ── Badge Styles ────────────────────────────────────────────────────────── */
+
+.md-typeset .badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.md-typeset .badge--success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.md-typeset .badge--warning {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .badge--success {
+  background-color: #1b5e20;
+  color: #a5d6a7;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .badge--warning {
+  background-color: #bf360c;
+  color: #ffccbc;
+}

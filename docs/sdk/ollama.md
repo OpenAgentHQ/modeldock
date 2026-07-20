@@ -1,31 +1,21 @@
-# Using ModelDock with Ollama
+# Ollama Integration
 
-ModelDock's first shipped runtime is **Ollama**. This guide shows how to drive
-Ollama entirely through the ModelDock SDK — discover, install, load, run, and
-manage models without touching the `ollama` CLI by hand.
-
-> Prerequisites: Python 3.9–3.12 and a local [Ollama](https://ollama.com)
-> install with the daemon running (`ollama serve`). Install the SDK with
-> `pip install modeldock[ollama]` so the optional `ollama` client is available.
+ModelDock's first shipped runtime is Ollama. This guide covers the full integration.
 
 ---
 
-## Install
+## Prerequisites
+
+- Python 3.9–3.12
+- A local [Ollama](https://ollama.com) install with the daemon running (`ollama serve`)
 
 ```bash
-pip install modeldock
 pip install modeldock[ollama]   # pulls in the ollama Python client
 ```
 
-Ollama is the default backend, so you rarely need to name it explicitly.
-
 ---
 
-## Load a model (auto-install)
-
-`md.load()` returns a ready-to-use Ollama client. If the model isn't installed
-locally, ModelDock installs it first (idempotently — already-installed models
-are not re-downloaded).
+## Load a Model
 
 ```python
 import modeldock as md
@@ -34,14 +24,14 @@ client = md.load("llama3")          # auto-installs if missing
 client = md.load("llama3", backend="ollama")  # explicit backend
 ```
 
-`load` is idempotent: calling it again for an installed model is instant.
+`load` is idempotent — calling it again for an installed model is instant.
 
 ---
 
-## Discover and inspect
+## Discover and Inspect
 
 ```python
-md.list()                       # browse the bundled catalog
+md.list()                       # browse the catalog
 md.search("coding")             # search by name / capability / category
 md.installed()                  # models already local (ModelRef list)
 md.info("qwen3")                # sizes, capabilities, variants, installed tags
@@ -49,12 +39,11 @@ md.categories()                 # available categories
 md.recommend(task="vision")     # guided pick
 ```
 
-`md.installed()` and `md.info()` work even for models that aren't in the
-bundled catalog, as long as they're installed in Ollama.
+`md.installed()` and `md.info()` work even for models not in the bundled catalog, as long as they're installed in Ollama.
 
 ---
 
-## Install explicitly
+## Install Explicitly
 
 ```python
 md.install("llama3")                  # single model
@@ -64,10 +53,7 @@ md.install_category("coding")         # bulk install recommended models
 
 ---
 
-## Run a completion / REPL
-
-`md.run()` talks to the Ollama runtime. With a `prompt` it returns a single
-completion; without one it drops into an interactive REPL.
+## Run Completions / REPL
 
 ```python
 # Single completion
@@ -78,7 +64,7 @@ print(result.text)
 md.run("llama3")
 ```
 
-Extra Ollama generation options are passed through:
+Pass Ollama generation options:
 
 ```python
 md.run("llama3", prompt="Hello", temperature=0.7, top_p=0.9)
@@ -86,7 +72,7 @@ md.run("llama3", prompt="Hello", temperature=0.7, top_p=0.9)
 
 ---
 
-## Update and remove
+## Update and Remove
 
 ```python
 md.update("llama3", confirm=True)   # removes then re-downloads — requires confirm
@@ -94,12 +80,12 @@ md.remove("llama3")                 # uninstall
 md.verify("llama3")                 # integrity check -> bool
 ```
 
-> `update()` is **destructive** (it deletes and re-pulls). It requires
-> `confirm=True` and refuses cloud/subscription models.
+!!! warning "Destructive Operation"
+    `update()` deletes and re-pulls. It requires `confirm=True` and refuses cloud/subscription models.
 
 ---
 
-## Cache management
+## Cache Management
 
 ```python
 md.cache.status()    # list cache entries
@@ -112,8 +98,6 @@ md.cache.clean(force=True)  # wipes everything
 
 ## Configuration
 
-Override the singleton manager before first use:
-
 ```python
 md.configure(
     ollama_host="http://localhost:11434",
@@ -122,7 +106,7 @@ md.configure(
 )
 ```
 
-Or build an explicit, isolated manager:
+Or build an explicit manager:
 
 ```python
 mgr = md.Manager(backend="ollama", ollama_host="http://localhost:11434")
@@ -131,12 +115,9 @@ mgr.load("llama3")
 
 ---
 
-## Cloud / subscription models
+## Cloud / Subscription Models
 
-Some catalog entries are **cloud/subscription** models — their tag contains
-`cloud` (e.g. `glm-5.2:cloud`, `qwen3.5:397b-cloud`). These cannot be installed,
-run, or removed through a local Ollama runtime. ModelDock short-circuits them
-with a clear `DownloadError` instead of blocking on a daemon call:
+Some catalog entries are cloud/subscription models (tag contains `cloud`). These cannot be installed, run, or removed through a local Ollama runtime:
 
 ```python
 md.remove("glm-5.2:cloud")   # -> DownloadError: cloud/subscription model ...
@@ -145,20 +126,18 @@ md.update("glm-5.2:cloud", confirm=True)  # -> DownloadError (rejected)
 
 ---
 
-## Runtime status
-
-Check whether Ollama is reachable and on which device models execute:
+## Runtime Status
 
 ```python
 status = md._manager().runtime_status()
-print(status.available, status.device)   # e.g. True, Device.CPU
+print(status.available, status.device)   # True, Device.CPU
 ```
 
 `device` is `Device.GPU`, `Device.CPU`, or `Device.UNKNOWN`.
 
 ---
 
-## Full example
+## Full Example
 
 ```python
 import modeldock as md
@@ -174,6 +153,3 @@ print(out.text)
 md.update("llama3", confirm=True)
 md.remove("llama3")
 ```
-
-See [`QUICKSTART.md`](getting-started/quickstart.md) for the CLI equivalent and
-[`Architecture.md`](architecture/overview.md) for the design contract.

@@ -1,0 +1,153 @@
+# ModelDock Documentation
+# MkDocs Material configuration
+
+site_name: ModelDock
+site_url: https://openagenthq.github.io/modeldock/
+site_author: Himanshu kumar (OpenAgentHQ)
+site_description: >-
+  The lightweight, Python-first model manager for local AI models —
+  the package manager for local LLMs.
+
+repo_name: OpenAgentHQ/modeldock
+repo_url: https://github.com/OpenAgentHQ/modeldock
+edit_uri: edit/main/docs/
+
+copyright: >-
+  Copyright &copy; 2026 OpenAgentHQ —
+  <a href="https://github.com/OpenAgentHQ/modeldock/blob/main/LICENSE">MIT License</a>
+
+# ── Theme ──────────────────────────────────────────────────────────────────
+
+theme:
+  name: material
+  language: en
+  palette:
+    # Dark mode (default — industrial, focused)
+    - scheme: default
+      primary: blue grey
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+    # Light mode
+    - scheme: slate
+      primary: blue grey
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/package-variant-closed
+
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - content.tabs.link
+    - toc.follow
+    - toc.integrate
+
+# ── Navigation ─────────────────────────────────────────────────────────────
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quickstart: getting-started/quickstart.md
+    - Installation: getting-started/installation.md
+    - First Model: getting-started/first-model.md
+  - User Guide:
+    - Overview: user-guide/overview.md
+    - Discover Models: user-guide/discover.md
+    - Install & Manage: user-guide/install.md
+    - Load & Run: user-guide/load.md
+    - Cache Management: user-guide/cache.md
+    - Configuration: user-guide/configuration.md
+  - SDK Reference:
+    - Python API: sdk/python-api.md
+    - CLI Reference: sdk/cli.md
+    - Ollama Integration: sdk/ollama.md
+  - Architecture:
+    - Design Overview: architecture/overview.md
+    - Clean Architecture: architecture/clean-architecture.md
+    - Runtime Adapters: architecture/runtime-adapters.md
+    - Port Interfaces: architecture/ports.md
+    - Error Handling: architecture/errors.md
+  - Contributing:
+    - Guidelines: contributing/guidelines.md
+    - Development Setup: contributing/development.md
+    - Adding Runtimes: contributing/new-runtime.md
+    - Testing Strategy: contributing/testing.md
+  - Project:
+    - Vision: project/vision.md
+    - Roadmap: project/roadmap.md
+    - Changelog: project/changelog.md
+    - Security: project/security.md
+    - License: project/license.md
+
+# ── Markdown Extensions ────────────────────────────────────────────────────
+
+markdown_extensions:
+  # Built-in
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.critic
+  - pymdownx.keys
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section
+  - meta
+
+# ── Plugins ────────────────────────────────────────────────────────────────
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+# ── Extra ──────────────────────────────────────────────────────────────────
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/OpenAgentHQ/modeldock
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/modeldock/
+  version:
+    provider: mike
+  generator: false
+
+extra_css:
+  - stylesheets/custom.css
