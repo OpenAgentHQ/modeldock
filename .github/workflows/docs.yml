@@ -9,15 +9,17 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: docs-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy MkDocs to GitHub Pages
+  build:
+    name: Build MkDocs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,13 +35,25 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Install documentation dependencies
+      - name: Install dependencies
         run: uv pip install mkdocs-material mkdocs-minify-plugin
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Build site
+        run: uv run mkdocs build --strict
 
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
-        run: uv run mkdocs gh-deploy --force --clean
+        id: deployment
+        uses: actions/deploy-pages@v4
