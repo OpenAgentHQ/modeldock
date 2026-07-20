@@ -8,6 +8,8 @@ hide:
 
 <div class="hero-banner" markdown>
 
+<img src="images/modeldock.png" alt="ModelDock" width="320" style="margin-bottom: 1rem;">
+
 ### The package manager for local AI models
 
 Lightweight. Python-first. Zero-config.
