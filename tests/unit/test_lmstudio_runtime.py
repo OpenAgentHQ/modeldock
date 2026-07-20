@@ -207,9 +207,7 @@ def test_list_installed_handles_empty_models() -> None:
 
 def test_is_installed_true_when_model_present() -> None:
     """Test is_installed returns True when model is in list."""
-    http_client = _MockHTTPClient(
-        models_response={"data": [{"id": "qwen/qwen3.5-9b"}]}
-    )
+    http_client = _MockHTTPClient(models_response={"data": [{"id": "qwen/qwen3.5-9b"}]})
     runtime = _runtime_with_http_client(http_client)
     ref = ModelRef(name="qwen", tag="qwen3.5-9b", backend=RuntimeBackend.LM_STUDIO)
     assert runtime.is_installed(ref) is True
@@ -228,9 +226,7 @@ def test_is_installed_false_when_model_absent() -> None:
 
 def test_pull_skips_when_already_installed() -> None:
     """Test pull is idempotent when model is already installed."""
-    http_client = _MockHTTPClient(
-        models_response={"data": [{"id": "qwen/qwen3.5-9b"}]}
-    )
+    http_client = _MockHTTPClient(models_response={"data": [{"id": "qwen/qwen3.5-9b"}]})
     runtime = _runtime_with_http_client(http_client)
     ref = ModelRef(name="qwen", tag="qwen3.5-9b", backend=RuntimeBackend.LM_STUDIO)
 
@@ -363,9 +359,7 @@ def test_run_single_prompt_streams_tokens() -> None:
     openai_client = _MockOpenAIClient(installed=True)
     runtime = _runtime_with_openai_client(openai_client)
     # Add model to installed list
-    http_client = _MockHTTPClient(
-        models_response={"data": [{"id": "qwen/qwen3.5-9b"}]}
-    )
+    http_client = _MockHTTPClient(models_response={"data": [{"id": "qwen/qwen3.5-9b"}]})
     runtime._ensure_http_client = lambda: http_client  # type: ignore[assignment]
 
     written: List[str] = []
@@ -410,9 +404,7 @@ def test_run_single_prompt_wraps_sdk_error() -> None:
         def create(self, **opts: Any) -> Any:
             raise RuntimeError("boom")
 
-    http_client = _MockHTTPClient(
-        models_response={"data": [{"id": "qwen/qwen3.5-9b"}]}
-    )
+    http_client = _MockHTTPClient(models_response={"data": [{"id": "qwen/qwen3.5-9b"}]})
     runtime = LMStudioRuntime()
     runtime._client = _BoomClient()
     runtime._ensure_http_client = lambda: http_client  # type: ignore[assignment]
@@ -430,14 +422,14 @@ def test_run_repl_reads_stdin_until_exit() -> None:
     """Test run REPL mode reads stdin until exit command."""
     openai_client = _MockOpenAIClient(installed=True)
     runtime = _runtime_with_openai_client(openai_client)
-    http_client = _MockHTTPClient(
-        models_response={"data": [{"id": "qwen/qwen3.5-9b"}]}
-    )
+    http_client = _MockHTTPClient(models_response={"data": [{"id": "qwen/qwen3.5-9b"}]})
     runtime._ensure_http_client = lambda: http_client  # type: ignore[assignment]
 
     written: List[str] = []
-    with patch.object(LMStudioRuntime, "_write", staticmethod(lambda t: written.append(t))), \
-         patch("sys.stdin", __import__("io").StringIO("first\nsecond\nexit\n")):
+    with (
+        patch.object(LMStudioRuntime, "_write", staticmethod(lambda t: written.append(t))),
+        patch("sys.stdin", __import__("io").StringIO("first\nsecond\nexit\n")),
+    ):
         result = runtime.run(
             ModelRef(name="qwen", tag="qwen3.5-9b", backend=RuntimeBackend.LM_STUDIO),
         )
