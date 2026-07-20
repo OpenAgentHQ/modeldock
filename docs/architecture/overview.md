@@ -89,13 +89,13 @@ This is what makes adding LM Studio, vLLM, etc. a matter of writing one new adap
 ## Design Decisions
 
 | Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| Clean Architecture + ports | Maximum extensibility for 6 future runtimes | More files/abstraction upfront |
-| Return runtime-native client | Stay lightweight; don't reimplement inference | Less uniform cross-runtime API |
-| Dynamic catalog via HTML scraping | Always up-to-date with ollama.com | Depends on ollama.com HTML structure |
-| Entry-point plugins | Third parties extend without forking | Slightly more discovery code |
-| `httpx` over `requests` | Streaming/resumable downloads, async-ready | Extra dep (small, well-maintained) |
-| Optional runtime SDK extras | Tiny base install | User may need `pip install modeldock[ollama]` |
+|:---------|:----------|:----------|
+| **Clean Architecture + ports** | Maximum extensibility for 6 future runtimes; testable without Ollama | More files/abstraction upfront; slight "ceremony" for a small v1 |
+| **Return runtime-native client** | Stay lightweight; don't reimplement inference | Less uniform cross-runtime inference API (acceptable — management is the product) |
+| **Dynamic catalog via HTML scraping** | Always up-to-date with ollama.com; zero manual maintenance | Depends on ollama.com HTML structure; mitigated by 24h cache + bundled fallback |
+| **Entry-point plugins** | Third parties extend without forking | Slightly more discovery code; stdlib `importlib.metadata` is cheap |
+| **`httpx` over `requests`** | Streaming/resumable downloads, async-ready | Extra dep (small, well-maintained) |
+| **Optional runtime SDK extras** | Tiny base install | User may need `pip install modeldock[ollama]` (documented) |
 
 ---
 
