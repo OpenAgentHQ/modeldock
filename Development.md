@@ -100,7 +100,17 @@ bandit -r src -c pyproject.toml
 # All-in-one via pre-commit
 pre-commit run --all-files
 ```
+Install pre-commit hooks:
 
+```bash
+pre-commit install
+```
+
+Run all hooks manually:
+
+```bash
+pre-commit run --all-files
+```
 Pre-commit is configured to run ruff, mypy, and bandit on every commit.
 
 ---

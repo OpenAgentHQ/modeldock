@@ -63,7 +63,8 @@ class BundledRegistry:
         raw["category"] = Category.from_value(raw["category"])
         raw["capabilities"] = [Capability.from_value(c) for c in raw.get("capabilities", [])]
         raw["backend_hints"] = [RuntimeBackend.from_value(b) for b in raw.get("backend_hints", [])]
-        return ModelSpec.model_validate(raw)
+
+        return cast(ModelSpec, ModelSpec.model_validate(raw))
 
     # --- RegistryPort -----------------------------------------------------
 
