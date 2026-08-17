@@ -24,18 +24,20 @@ theme:
   logo: images/logo-header.png
   favicon: images/modeldock.png
   palette:
-    # Light mode — respects the OS preference on first visit
+    # Light mode — respects the OS preference on first visit. Flat white
+    # header/nav (no colored bar) in the style of modern docs platforms
+    # like Mintlify.
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue grey
+      primary: white
       accent: teal
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    # Dark mode
+    # Dark mode — flat near-black header to match.
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue grey
+      primary: black
       accent: teal
       toggle:
         icon: material/brightness-4

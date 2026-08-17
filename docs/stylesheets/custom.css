@@ -1,31 +1,59 @@
 /* ── ModelDock Documentation — Custom Styles ─────────────────────────────────
-   Editorial, industrial aesthetic. Clean typography hierarchy, deliberate
-   whitespace, and subtle atmosphere that reinforces the "package manager"
-   identity.
+   Flat, minimal docs-platform aesthetic (Mintlify-inspired): a plain white
+   header with a hairline border instead of a colored bar, a plain-text
+   hero with no gradient banner, and icon-card grids for navigation —
+   consistent light typography with deliberate whitespace.
    ──────────────────────────────────────────────────────────────────────── */
 
 /* ── Root Variables ──────────────────────────────────────────────────────── */
+/* The header/nav's flat white/black background comes from mkdocs.yml's
+   `primary: white` / `primary: black` palette via its own dedicated rule —
+   independent of the `--md-primary-fg-color` variable, which those two
+   special values leave at Material's stock indigo default. That variable is
+   NOT just a header color though: `.md-typeset a`, inline `code` borders,
+   `.md-button--primary`, and more all read it directly, so left alone every
+   link and button site-wide renders indigo regardless of the flat header.
+   Pinning it to the accent color here fixes all of those at the source. */
 
 :root {
-  --md-primary-fg-color: #455a64;
-  --md-primary-fg-color--light: #607d8b;
-  --md-primary-fg-color--dark: #263238;
-  --md-accent-fg-color: #26a69a;
-  --md-accent-fg-color--transparent: rgba(38, 166, 154, 0.1);
-  --md-default-fg-color: #37474f;
-  --md-default-bg-color: #ffffff;
-  --md-typeset-color: #37474f;
+  --md-primary-fg-color: #0f9d8a;
+  --md-accent-fg-color: #0f9d8a;
+  --md-accent-fg-color--transparent: rgba(15, 157, 138, 0.1);
+  --mdx-border-color: #e5e7eb;
+  --mdx-muted-color: #5f6b7a;
+  --mdx-surface-color: #f8fafa;
 }
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #607d8b;
-  --md-primary-fg-color--light: #90a4ae;
-  --md-primary-fg-color--dark: #455a64;
-  --md-accent-fg-color: #4db6ac;
-  --md-accent-fg-color--transparent: rgba(77, 182, 172, 0.1);
-  --md-default-fg-color: #cfd8dc;
-  --md-default-bg-color: #1a1a2e;
-  --md-typeset-color: #cfd8dc;
+  --md-primary-fg-color: #2dd4bf;
+  --md-accent-fg-color: #2dd4bf;
+  --md-accent-fg-color--transparent: rgba(45, 212, 191, 0.12);
+  --mdx-border-color: #2a2f36;
+  --mdx-muted-color: #9aa4b2;
+  --mdx-surface-color: #14181d;
+}
+
+/* ── Header / Tabs ───────────────────────────────────────────────────────── */
+
+.md-header {
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--mdx-border-color);
+}
+
+.md-header--shadow {
+  box-shadow: none !important;
+}
+
+.md-tabs {
+  border-bottom: 1px solid var(--mdx-border-color);
+}
+
+/* The header logo is black line art (correct against the flat white light
+   header); invert it for the flat black dark header instead of shipping a
+   second image file. */
+[data-md-color-scheme="slate"] .md-header__button.md-logo img,
+[data-md-color-scheme="slate"] .md-logo img {
+  filter: invert(1);
 }
 
 /* ── Typography ──────────────────────────────────────────────────────────── */
@@ -33,14 +61,13 @@
 .md-typeset h1 {
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .md-typeset h2 {
   font-weight: 700;
   letter-spacing: -0.02em;
-  border-bottom: 2px solid var(--md-accent-fg-color);
-  padding-bottom: 0.3em;
+  margin-top: 2.2em;
 }
 
 .md-typeset h3 {
@@ -50,75 +77,56 @@
 
 /* ── Hero / Landing Page ─────────────────────────────────────────────────── */
 
-.md-typeset .hero-banner {
-  background: linear-gradient(135deg, #263238 0%, #37474f 50%, #455a64 100%);
-  color: #eceff1;
-  padding: 4rem 2rem;
-  margin: -1.5rem -1rem 2rem -1rem;
-  border-radius: 0.5rem;
+.md-typeset .hero-section {
   text-align: center;
+  padding: 2rem 0 0.5rem;
 }
 
-[data-md-color-scheme="slate"] .md-typeset .hero-banner {
-  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
+.md-typeset .hero-section h1 {
+  font-size: 2.75rem;
+  margin: 0 0 0.6rem;
 }
 
-.hero-banner h1 {
-  font-size: 2.8rem;
-  font-weight: 900;
-  margin-bottom: 0.5rem;
-  color: #ffffff;
+.hero-sub {
+  font-size: 1.15rem;
+  color: var(--mdx-muted-color);
+  max-width: 620px;
+  margin: 0 auto 1.75rem;
+  line-height: 1.6;
 }
 
-.hero-banner p {
-  font-size: 1.2rem;
-  opacity: 0.9;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-/* Buttons sit on a dark gradient regardless of light/dark scheme, so give
-   both variants their own contrast instead of inheriting the page palette. */
-.hero-banner .md-button {
+.hero-section .md-button {
   margin: 0.3rem;
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #ffffff;
 }
 
-.hero-banner .md-button:hover {
-  border-color: #ffffff;
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
+/* Site-wide button styling. Material's built-in `.md-button--primary` reads
+   `--md-primary-fg-color`, which stays a default indigo even under the
+   `primary: white` / `primary: black` palettes used here (that special
+   value only patches the header background, not the CSS variable) — so it
+   must be pinned to the accent color explicitly rather than left to
+   inherit. */
+.md-typeset .md-button {
+  border-radius: 8px;
+  border-color: var(--mdx-border-color);
+  color: var(--md-default-fg-color);
 }
 
-.hero-banner .md-button--primary {
+.md-typeset .md-button:hover {
+  border-color: var(--md-accent-fg-color);
+  color: var(--md-accent-fg-color);
+  background-color: transparent;
+}
+
+.md-typeset .md-button--primary {
   background-color: var(--md-accent-fg-color);
   border-color: var(--md-accent-fg-color);
   color: #ffffff;
 }
 
-.hero-banner .md-button--primary:hover {
+.md-typeset .md-button--primary:hover {
   background-color: transparent;
   border-color: var(--md-accent-fg-color);
   color: var(--md-accent-fg-color);
-}
-
-/* Logo sits on a white tile so its opaque background reads as a deliberate
-   badge rather than a stray box against the dark hero gradient. */
-.hero-logo-tile {
-  display: inline-flex;
-  background: #ffffff;
-  border-radius: 1.5rem;
-  padding: 0.85rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-  margin-bottom: 1.25rem;
-}
-
-.hero-logo-tile img {
-  display: block;
-  width: 84px;
-  height: 84px;
-  margin: 0;
 }
 
 /* Small pill above the headline (version / status). */
@@ -128,30 +136,29 @@
   gap: 0.4em;
   padding: 0.3em 0.9em;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #eceff1;
+  background: var(--mdx-surface-color);
+  border: 1px solid var(--mdx-border-color);
+  color: var(--mdx-muted-color);
   font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  margin-bottom: 1rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 1.25rem;
 }
 
 /* ── Demo Media (embedded product GIF/screenshots) ──────────────────────── */
 
 .md-typeset .demo-frame {
-  max-width: 900px;
+  max-width: 880px;
   margin: 1.5rem auto 2.5rem;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--mdx-border-color);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
   background: #0d1117;
 }
 
 [data-md-color-scheme="slate"] .md-typeset .demo-frame {
-  border-color: #37474f;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
 .demo-frame__titlebar {
@@ -180,44 +187,94 @@
   margin: 0;
 }
 
-/* ── Feature Grid ────────────────────────────────────────────────────────── */
+/* ── Icon Card Grid (Mintlify-style navigation cards) ───────────────────── */
 
-.md-typeset .feature-grid {
+.md-typeset .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin: 2rem 0;
+  grid-template-columns: repeat(var(--card-grid-cols, 3), 1fr);
+  gap: 1rem;
+  margin: 1.25rem 0 2.5rem;
 }
 
-.md-typeset .feature-card {
-  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.md-typeset .card-grid--2 { --card-grid-cols: 2; }
+.md-typeset .card-grid--3 { --card-grid-cols: 3; }
+
+@media screen and (max-width: 76.1875em) {
+  .md-typeset .card-grid--3 { --card-grid-cols: 2; }
 }
 
-.md-typeset .feature-card:hover {
+@media screen and (max-width: 44.9375em) {
+  .md-typeset .card-grid { --card-grid-cols: 1 !important; }
+}
+
+.md-typeset a.doc-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 1.15rem 1.25rem 1.25rem;
+  border: 1px solid var(--mdx-border-color);
+  border-radius: 10px;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.md-typeset a.doc-card:hover {
   border-color: var(--md-accent-fg-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: var(--md-default-fg-color);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+  text-decoration: none;
 }
 
-[data-md-color-scheme="slate"] .md-typeset .feature-card {
-  border-color: #37474f;
+[data-md-color-scheme="slate"] .md-typeset a.doc-card:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
 }
 
-[data-md-color-scheme="slate"] .md-typeset .feature-card:hover {
-  border-color: var(--md-accent-fg-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.md-typeset a.doc-card p {
+  margin: 0;
 }
 
-.feature-card h3 {
-  margin-top: 0;
-  font-size: 1.1rem;
+.md-typeset .doc-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--md-accent-fg-color--transparent);
+  margin-bottom: 0.6rem;
 }
 
-.feature-card p {
-  font-size: 0.9rem;
-  opacity: 0.85;
+.md-typeset .doc-card__icon svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--md-accent-fg-color);
+}
+
+.doc-card__title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--md-default-fg-color);
+}
+
+.doc-card__desc {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--mdx-muted-color);
+  line-height: 1.55;
+  margin-top: 0.3rem !important;
+}
+
+.doc-card__cta {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--md-accent-fg-color);
+  margin-top: 0.7rem !important;
 }
 
 /* ── Code Blocks ─────────────────────────────────────────────────────────── */
@@ -226,6 +283,12 @@
   border-radius: 4px;
   padding: 0.15em 0.4em;
   font-size: 0.85em;
+  /* Material's `primary: white`/`black` palettes hard-code inline code to
+     indigo regardless of `--md-primary-fg-color`; pin it to a neutral tone
+     instead (also reads more like GitHub/Mintlify's monochrome inline code
+     than accent-tinted text). */
+  color: var(--md-default-fg-color) !important;
+  background-color: var(--mdx-surface-color);
 }
 
 .md-typeset pre > code {
@@ -251,20 +314,17 @@
   border-radius: 8px;
   overflow: hidden;
   font-size: 0.88rem;
+  border: 1px solid var(--mdx-border-color);
 }
 
 .md-typeset table:not([class]) th {
-  background-color: var(--md-primary-fg-color);
-  color: #ffffff;
-  font-weight: 600;
+  background-color: var(--mdx-surface-color);
+  color: var(--md-default-fg-color);
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background-color: #263238;
-  color: #eceff1;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--mdx-border-color);
 }
 
 /* ── Tabs ────────────────────────────────────────────────────────────────── */
@@ -272,7 +332,7 @@
 .md-typeset .tabbed-set {
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  border: 1px solid var(--mdx-border-color);
 }
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
@@ -287,22 +347,26 @@
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
+/* Explicit dark colors regardless of the primary palette (white/black), so
+   the footer always reads as a clear, deliberate boundary under the content
+   in both themes. */
 
-.md-footer {
-  background-color: var(--md-primary-fg-color--dark);
+.md-footer,
+.md-footer-meta {
+  background-color: #111827;
 }
 
-/* Prev/next page pagination (navigation.footer) */
+[data-md-color-scheme="slate"] .md-footer,
+[data-md-color-scheme="slate"] .md-footer-meta {
+  background-color: #000000;
+}
+
 .md-footer__link {
   transition: opacity 0.2s;
 }
 
 .md-footer__link:hover {
   opacity: 0.75;
-}
-
-.md-footer-meta {
-  background-color: var(--md-primary-fg-color--dark);
 }
 
 .md-footer-meta__inner {
@@ -348,8 +412,8 @@
 /* ── Flow Diagrams ───────────────────────────────────────────────────────── */
 
 .md-typeset .flow-diagram {
-  background: var(--md-default-bg-color);
-  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  background: var(--mdx-surface-color);
+  border: 1px solid var(--mdx-border-color);
   border-radius: 8px;
   padding: 1.5rem;
   margin: 1.5rem 0;
@@ -358,10 +422,6 @@
   line-height: 1.8;
   overflow-x: auto;
   white-space: pre;
-}
-
-[data-md-color-scheme="slate"] .md-typeset .flow-diagram {
-  border-color: #37474f;
 }
 
 /* ── Badge Styles ────────────────────────────────────────────────────────── */
