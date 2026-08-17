@@ -3,25 +3,23 @@
 Fetches the full model list from ollama.com, auto-detects categories and
 capabilities from model names and HTML tags, and caches locally for offline
 use. This is the default registry when ``catalog_source="auto"`` or
-``catalog_source="ollama"``. See Architecture.md §9.
+``catalog_source="ollama"``. Built on ``CachedCatalogRegistry``, the shared
+fetch → cache → index pipeline every live catalog source uses. See
+Architecture.md §9.
 """
 
 from __future__ import annotations
 
-import json
 import re
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from modeldock.common.errors import ModelNotFoundError
+from modeldock.adapters.registry.base import CachedCatalogRegistry
+from modeldock.common.catalog_cache import load_catalog_cache, save_catalog_cache
 from modeldock.common.http import create_client
-from modeldock.common.logging import get_logger
 from modeldock.domain.model import (
     Capability,
     Category,
-    ModelAlias,
-    ModelRef,
     ModelSpec,
     RuntimeBackend,
 )
@@ -164,41 +162,21 @@ def _scrape_library_html(html: str) -> List[Dict[str, Any]]:
 
 # ---------------------------------------------------------------------------
 # Cache management
+#
+# Thin wrappers around the shared TTL'd JSON cache (common/catalog_cache.py)
+# so existing call sites/tests keep this module's own ``_save_cache`` /
+# ``_load_cache`` names and signatures.
 # ---------------------------------------------------------------------------
 
 
 def _save_cache(cache_path: Path, models: List[Dict[str, Any]]) -> None:
     """Save scraped models to local cache."""
-    data = {
-        "version": 1,
-        "scraped_at": time.time(),
-        "models": models,
-    }
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    # Atomic write: write to temp file then replace
-    tmp_path = cache_path.with_suffix(".tmp")
-    try:
-        tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        tmp_path.replace(cache_path)
-    except Exception:
-        # Clean up on failure
-        if tmp_path.exists():
-            tmp_path.unlink()
+    save_catalog_cache(cache_path, models)
 
 
 def _load_cache(cache_path: Path) -> Optional[List[Dict[str, Any]]]:
     """Load models from local cache if fresh."""
-    if not cache_path.exists():
-        return None
-    try:
-        raw: Dict[str, Any] = json.loads(cache_path.read_text(encoding="utf-8"))
-        scraped_at = raw.get("scraped_at", 0)
-        if time.time() - scraped_at > _CACHE_TTL_SECONDS:
-            return None  # Cache expired
-        models: List[Dict[str, Any]] = raw.get("models", [])
-        return models
-    except (json.JSONDecodeError, KeyError):
-        return None
+    return load_catalog_cache(cache_path, _CACHE_TTL_SECONDS)
 
 
 # ---------------------------------------------------------------------------
@@ -206,33 +184,19 @@ def _load_cache(cache_path: Path) -> Optional[List[Dict[str, Any]]]:
 # ---------------------------------------------------------------------------
 
 
-class OllamaLibraryRegistry:
+class OllamaLibraryRegistry(CachedCatalogRegistry):
     """Registry that scrapes ollama.com/library for the full model catalog.
 
     On initialization, fetches the model list from ollama.com, auto-detects
     categories and capabilities, and caches locally. Falls back to cache when
-    offline. Implements ``RegistryPort``.
+    offline. Implements ``RegistryPort`` via ``CachedCatalogRegistry``.
     """
 
     def __init__(self, cache_dir: Path) -> None:
-        self._logger = get_logger("registry.ollama_library")
-        self._cache_path = cache_dir / _CACHE_FILENAME
-        self._specs: Dict[str, ModelSpec] = {}
-        self._by_alias: Dict[str, str] = {}
-        self._load()
+        super().__init__(cache_dir, _CACHE_FILENAME, "registry.ollama_library")
 
-    def _load(self) -> None:
-        """Try network first, then cache, then raise."""
-        models = self._fetch_from_network()
-        if models is None:
-            models = _load_cache(self._cache_path)
-        if models is None:
-            self._logger.warning(
-                "No network and no cache; catalog will be empty. "
-                "Run with network once to populate the cache."
-            )
-            return
-        self._build_index(models)
+    def _load_cache(self) -> Optional[List[Dict[str, Any]]]:
+        return _load_cache(self._cache_path)
 
     def _fetch_from_network(self) -> Optional[List[Dict[str, Any]]]:
         """Fetch model list from ollama.com/library."""
@@ -248,15 +212,6 @@ class OllamaLibraryRegistry:
         except Exception as exc:
             self._logger.debug("Network fetch failed: %s", exc)
             return None
-
-    def _build_index(self, models: List[Dict[str, Any]]) -> None:
-        """Build in-memory index from scraped model data."""
-        for raw in models:
-            spec = self._to_spec(raw)
-            self._specs[spec.name] = spec
-            for alias in spec.aliases:
-                self._by_alias[alias.lower()] = spec.name
-            self._by_alias[spec.name.lower()] = spec.name
 
     def _to_spec(self, raw: Dict[str, Any]) -> ModelSpec:
         """Convert scraped model dict to ModelSpec."""
@@ -276,42 +231,6 @@ class OllamaLibraryRegistry:
             description=description,
             backend_hints=[RuntimeBackend.OLLAMA],
         )
-
-    # --- RegistryPort -----------------------------------------------------
-
-    def search(self, query: str) -> List[ModelSpec]:
-        """Return specs whose name/alias/capability/category match ``query``."""
-        return [s for s in self._specs.values() if ModelAlias.matches_query(s, query)]
-
-    def get(self, ref: ModelRef) -> ModelSpec:
-        """Return the canonical spec for ``ref`` (raises if unknown)."""
-        name = self._by_alias.get(ref.name.lower())
-        if name is None:
-            raise ModelNotFoundError(ref.name)
-        return self._specs[name]
-
-    def by_category(self, category: Category) -> List[ModelSpec]:
-        """Return all specs in a category."""
-        return [s for s in self._specs.values() if s.category == category]
-
-    def recommend(self, task: str) -> List[ModelSpec]:
-        """Return specs recommended for a task (capability/category hint)."""
-        q = (task or "").strip().lower()
-        if not q:
-            return list(self._specs.values())
-        matched = [s for s in self._specs.values() if ModelAlias.matches_query(s, q)]
-        if matched:
-            return matched
-        # Fall back to capability-based recommendation.
-        try:
-            cap = Capability.from_value(q)
-            return [s for s in self._specs.values() if cap in s.capabilities]
-        except ValueError:
-            return []
-
-    def list_all(self) -> List[ModelSpec]:
-        """Return every known spec."""
-        return list(self._specs.values())
 
 
 __all__ = ["OllamaLibraryRegistry"]

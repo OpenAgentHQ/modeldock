@@ -1,7 +1,8 @@
 """ModelDock registry adapters — dynamic Ollama catalog + bundled fallback."""
 
+from modeldock.adapters.registry.base import CachedCatalogRegistry
 from modeldock.adapters.registry.bundled import BundledRegistry
 from modeldock.adapters.registry.ollama_library import OllamaLibraryRegistry
 from modeldock.adapters.registry.remote import RemoteRegistry
 
-__all__ = ["BundledRegistry", "OllamaLibraryRegistry", "RemoteRegistry"]
+__all__ = ["BundledRegistry", "CachedCatalogRegistry", "OllamaLibraryRegistry", "RemoteRegistry"]

@@ -343,9 +343,18 @@ A **searchable, versioned catalog** decoupled from any runtime.
   dynamic catalog fails and no cache exists.
 - **`RegistryPort`** abstraction: `search(query)`, `get(ref)`,
   `by_category(cat)`, `recommend(task)`, `list_all()`.
+- **`CachedCatalogRegistry`** (`adapters/registry/base.py`): the shared
+  fetch → cache → index pipeline behind every live catalog source.
+  Subclasses implement only `_fetch_from_network()` (reach the source, parse
+  raw entries) and `_to_spec()` (raw entry → `ModelSpec`); disk caching
+  (`common/catalog_cache.py`, TTL'd JSON with atomic writes), indexing, and
+  every `RegistryPort` method are implemented once here so a new live source
+  (Hugging Face, LM Studio, ...) never has to reimplement them.
+  `CatalogProvider` (`ports/catalog_provider.py`) documents the matching
+  fetch/parse contract for such sources.
 - **Implementations:**
   - `OllamaLibraryRegistry` — scrapes ollama.com, auto-detects metadata,
-    caches locally (default).
+    caches locally (default). Built on `CachedCatalogRegistry`.
   - `BundledRegistry` — reads `catalog.json` (offline fallback).
   - `RemoteRegistry` — optional fetch/refresh from a URL/JSON for community
     updates without a package release.

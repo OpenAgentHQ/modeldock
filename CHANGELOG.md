@@ -4,6 +4,28 @@ All notable changes to ModelDock will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Registry internals refactor — no behavior change. Groundwork for adding new
+live catalog sources (e.g. Hugging Face for LM Studio/llama.cpp) without
+duplicating caching/indexing logic per source.
+
+### Added
+
+- `CachedCatalogRegistry` (`adapters/registry/base.py`) — shared fetch →
+  cache → index pipeline and `RegistryPort` implementation for live catalog
+  sources
+- `common/catalog_cache.py` — generic TTL'd JSON disk cache (extracted from
+  `ollama_library.py`)
+- `CatalogProvider` port (`ports/catalog_provider.py`) — the fetch/parse
+  contract future live catalog sources implement
+
+### Changed
+
+- `OllamaLibraryRegistry` now builds on `CachedCatalogRegistry` instead of
+  duplicating the fetch/cache/index/`RegistryPort` logic inline; scraping,
+  auto-detection, and caching behavior are unchanged
+
 ## [0.1.3] - 2026-07-19
 
 Dynamic catalog: replaced static `catalog.json` with live scraping of ollama.com.
