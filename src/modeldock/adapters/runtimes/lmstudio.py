@@ -8,7 +8,8 @@ Architecture.md §4/§14.
 from __future__ import annotations
 
 import time
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from modeldock.adapters.runtimes import lmstudio_catalog
 from modeldock.adapters.runtimes.base import BaseRuntime
@@ -20,6 +21,9 @@ from modeldock.common.errors import (
 )
 from modeldock.domain.model import Capability, Category, Device, ModelRef, RuntimeBackend
 from modeldock.ports.runtime import PullResult, RunResult
+
+if TYPE_CHECKING:
+    from modeldock.adapters.registry.huggingface_catalog import HuggingFaceCatalogProvider
 
 _DEFAULT_HOST = "http://localhost:1234"
 _DEFAULT_TIMEOUT = 30.0
@@ -59,11 +63,14 @@ class LMStudioRuntime(BaseRuntime):
         self,
         host: Optional[str] = None,
         api_key: Optional[str] = None,
+        cache_dir: Optional[Path] = None,
     ) -> None:
         super().__init__()
         self._host = host
         self._api_key = api_key
         self._client: Any = None
+        self._cache_dir = cache_dir
+        self._hf_catalog: Optional[HuggingFaceCatalogProvider] = None
 
     # --- internal helpers -------------------------------------------------
 
@@ -150,22 +157,46 @@ class LMStudioRuntime(BaseRuntime):
 
     # --- backend-specific model suggestions --------------------------------
 
+    def _live_catalog(self) -> HuggingFaceCatalogProvider:
+        """Return the lazily-built, memoized live Hugging Face catalog.
+
+        Constructed once per runtime instance since it fetches over the
+        network on first use (like ``OllamaLibraryRegistry``).
+        """
+        if self._hf_catalog is None:
+            from modeldock.adapters.registry.huggingface_catalog import (
+                HuggingFaceCatalogProvider,
+            )
+            from modeldock.common.platform import default_cache_dir
+
+            self._hf_catalog = HuggingFaceCatalogProvider(
+                self._cache_dir or default_cache_dir(), RuntimeBackend.LM_STUDIO
+            )
+        return self._hf_catalog
+
     def models_for_category(self, category: Category) -> List[ModelRef]:
-        """Return curated LM Studio models for ``category``.
+        """Return LM Studio models for ``category``.
 
         LM Studio addresses models by Hugging Face coordinates
         (``publisher/repo``), not by the Ollama tags the shared catalog is built
-        from, so category installs resolve through this mapping instead. Returns
-        an empty list for a category with no curated entries, which callers
-        treat as "nothing to suggest" rather than an error. See issue #19.
+        from, so category installs resolve through the Hugging Face Hub's live
+        GGUF listing (see issue #19). Falls back to a small curated table when
+        the Hub is unreachable and no cache exists yet, so suggestions never
+        require a network round trip to work at all — only to be fresh.
         """
+        live = self._live_catalog().models_for_category(category)
+        if live:
+            return live
         return [
             ModelRef.parse(entry.model_id, backend=RuntimeBackend.LM_STUDIO)
             for entry in lmstudio_catalog.models_for_category(category)
         ]
 
     def models_for_capability(self, capability: Capability) -> List[ModelRef]:
-        """Return curated LM Studio models exposing ``capability``."""
+        """Return LM Studio models exposing ``capability`` (live, with static fallback)."""
+        live = self._live_catalog().models_for_capability(capability)
+        if live:
+            return live
         return [
             ModelRef.parse(entry.model_id, backend=RuntimeBackend.LM_STUDIO)
             for entry in lmstudio_catalog.models_for_capability(capability)

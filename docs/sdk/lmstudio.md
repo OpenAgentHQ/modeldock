@@ -53,12 +53,15 @@ md.ModelRef.parse("qwen/qwen3-4b")        # name="qwen/qwen3-4b", tag="latest"
 md.ModelRef.parse("qwen/qwen3-4b:q4_k_m") # name="qwen/qwen3-4b", tag="q4_k_m"
 ```
 
-### Category installs use a curated list
+### Category installs query the Hugging Face Hub live
 
-`install_category()` on LM Studio installs from a curated mapping rather than
-the full catalog, so the set is deliberately small and opinionated — a few
-well-known models per category, ordered smallest-first so the first suggestion
-is the one most likely to run on a laptop.
+LM Studio's own local API exposes no searchable remote catalog, so there is
+nothing on the LM Studio side to query. Instead, `install_category()` queries
+the **Hugging Face Hub** directly for GGUF-tagged repositories — the same
+place LM Studio's own model browser pulls from — and caches the result for 24
+hours (`adapters/registry/huggingface_catalog.py`). This means the list of
+suggested models grows and updates on its own; nothing needs to be
+hand-maintained or shipped in a new ModelDock release for it to stay current.
 
 Preview the list before committing to the downloads:
 
@@ -67,12 +70,11 @@ mgr.suggest_category("coding")     # -> [ModelRef, ...], installs nothing
 mgr.suggest_capability("vision")
 ```
 
-Because the mapping is curated, it is a point-in-time snapshot: publishers
-rename and retire repos, and a model listed here may not resolve forever. The
-list lives in `src/modeldock/adapters/runtimes/lmstudio_catalog.py` and adding
-or correcting an entry is a one-line change requiring no other code. There is
-no runtime alternative — LM Studio's local API exposes no searchable remote
-catalog, so there is nothing to query.
+When the Hub is unreachable and no cache exists yet (fully offline, first
+run, no network), ModelDock falls back to a small curated list shipped in
+`src/modeldock/adapters/runtimes/lmstudio_catalog.py`, so suggestions still
+work with zero network access — just with a shorter, point-in-time list
+instead of the live one.
 
 Backends whose names already match the catalog (Ollama) are unaffected and
 continue to install the full category.

@@ -30,6 +30,26 @@ download, swap, or unload one the way LM Studio has. `list_installed()`
 therefore returns at most one `ModelRef`: whatever `llama-server` reports at
 `/v1/models`.
 
+### Category/capability suggestions query the Hugging Face Hub live
+
+llama.cpp has no catalog of its own — it loads a GGUF file directly, and can
+fetch one straight from a Hugging Face repo via `--hf-repo`/`--hf-file`. The
+shared catalog's names come from `ollama.com/library` and are not valid
+`--hf-repo` coordinates, so `suggest_category()`/`suggest_capability()`
+resolve through the same live Hugging Face GGUF listing LM Studio uses
+(`adapters/registry/huggingface_catalog.py`), cached for 24 hours:
+
+```python
+mgr.suggest_category("coding")     # -> [ModelRef, ...] naming real HF repos
+```
+
+Unlike LM Studio, there is no curated fallback list here — when the Hub is
+unreachable and no cache exists yet, suggestions are an empty list rather
+than a guess. `install_category()` still cannot actually download anything
+(see below), but the repo names it reports in its `DownloadError` are now
+real, pastable `--hf-repo` coordinates instead of Ollama tags that mean
+nothing to `llama-server`.
+
 ### `install()` fails with an actionable message
 
 Because there is no network API to fetch a model into a running server,

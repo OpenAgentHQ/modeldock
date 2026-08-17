@@ -10,7 +10,8 @@ catalog. See Architecture.md §4/§14.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from modeldock.adapters.runtimes.base import BaseRuntime
 from modeldock.common.errors import (
@@ -19,8 +20,11 @@ from modeldock.common.errors import (
     ModelNotInstalledError,
     RuntimeUnavailableError,
 )
-from modeldock.domain.model import Device, ModelRef, RuntimeBackend
+from modeldock.domain.model import Capability, Category, Device, ModelRef, RuntimeBackend
 from modeldock.ports.runtime import PullResult, RunResult
+
+if TYPE_CHECKING:
+    from modeldock.adapters.registry.huggingface_catalog import HuggingFaceCatalogProvider
 
 _DEFAULT_HOST = "http://localhost:8080"
 _DEFAULT_TIMEOUT = 30.0
@@ -60,11 +64,14 @@ class LlamaCppRuntime(BaseRuntime):
         self,
         host: Optional[str] = None,
         api_key: Optional[str] = None,
+        cache_dir: Optional[Path] = None,
     ) -> None:
         super().__init__()
         self._host = host
         self._api_key = api_key
         self._client: Any = None
+        self._cache_dir = cache_dir
+        self._hf_catalog: Optional[HuggingFaceCatalogProvider] = None
 
     # --- internal helpers -------------------------------------------------
 
@@ -147,6 +154,42 @@ class LlamaCppRuntime(BaseRuntime):
         """
         if not self.is_available():
             raise RuntimeUnavailableError("llamacpp", hint=_SERVER_NOT_RUNNING_HINT)
+
+    # --- backend-specific model suggestions --------------------------------
+
+    def _live_catalog(self) -> HuggingFaceCatalogProvider:
+        """Return the lazily-built, memoized live Hugging Face catalog.
+
+        Constructed once per runtime instance since it fetches over the
+        network on first use (like ``OllamaLibraryRegistry``).
+        """
+        if self._hf_catalog is None:
+            from modeldock.adapters.registry.huggingface_catalog import (
+                HuggingFaceCatalogProvider,
+            )
+            from modeldock.common.platform import default_cache_dir
+
+            self._hf_catalog = HuggingFaceCatalogProvider(
+                self._cache_dir or default_cache_dir(), RuntimeBackend.LLAMACPP
+            )
+        return self._hf_catalog
+
+    def models_for_category(self, category: Category) -> List[ModelRef]:
+        """Return llama.cpp-addressable models for ``category``.
+
+        llama.cpp has no catalog of its own: it loads GGUF files directly, and
+        can fetch them straight from a Hugging Face repo via ``--hf-repo`` (see
+        ``_SINGLE_MODEL_HINT``). The shared Ollama-scraped catalog names are not
+        valid ``--hf-repo`` coordinates, so category installs resolve through
+        the live Hugging Face GGUF listing instead. Returns an empty list
+        (rather than the wrong names) when the Hub is unreachable and no cache
+        exists yet.
+        """
+        return self._live_catalog().models_for_category(category)
+
+    def models_for_capability(self, capability: Capability) -> List[ModelRef]:
+        """Return llama.cpp-addressable models exposing ``capability`` (live)."""
+        return self._live_catalog().models_for_capability(capability)
 
     def _parse_model_id(self, entry: Any) -> str:
         """Extract a model ID from a /v1/models entry (object or dict)."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import MagicMock, Mock, patch
 
@@ -486,6 +487,82 @@ def test_default_tag_for_returns_spec_default() -> None:
         default_tag="qwen2.5-7b-instruct",
     )
     assert runtime.default_tag_for(spec) == "qwen2.5-7b-instruct"
+
+
+# --- model suggestions (live Hugging Face catalog) --------------------------------
+#
+# llama.cpp has no catalog of its own; models_for_category/_capability resolve
+# through the live Hugging Face GGUF listing (huggingface_catalog.py). These
+# tests mock the network so they stay fast and deterministic.
+
+
+def test_models_for_category_empty_when_hub_unreachable(tmp_path: Path) -> None:
+    """No catalog of its own and no cache yet: an empty list, not a crash or a
+    bogus Ollama-named suggestion.
+    """
+    from modeldock.domain.model import Capability, Category
+
+    with patch("modeldock.adapters.registry.huggingface_catalog.create_client") as mock_factory:
+        mock_client = MagicMock()
+        mock_client.get.side_effect = Exception("network disabled for test")
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_factory.return_value = mock_client
+
+        runtime = LlamaCppRuntime(cache_dir=tmp_path)
+        assert runtime.models_for_category(Category.CODING) == []
+        assert runtime.models_for_capability(Capability.CHAT) == []
+
+
+def test_models_for_category_uses_live_hub_catalog(tmp_path: Path) -> None:
+    from modeldock.domain.model import Category
+
+    with patch("modeldock.adapters.registry.huggingface_catalog.create_client") as mock_factory:
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {
+                "id": "unit-test-org/Coder-7B-GGUF",
+                "pipeline_tag": "text-generation",
+                "tags": ["gguf", "conversational"],
+            }
+        ]
+        mock_client = MagicMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_factory.return_value = mock_client
+
+        runtime = LlamaCppRuntime(cache_dir=tmp_path)
+        refs = runtime.models_for_category(Category.CODING)
+
+    assert len(refs) == 1
+    assert refs[0].name == "unit-test-org/Coder-7B-GGUF"
+    assert refs[0].backend is RuntimeBackend.LLAMACPP
+
+
+def test_models_for_capability_uses_live_hub_catalog(tmp_path: Path) -> None:
+    from modeldock.domain.model import Capability
+
+    with patch("modeldock.adapters.registry.huggingface_catalog.create_client") as mock_factory:
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {
+                "id": "unit-test-org/Embed-Model-GGUF",
+                "pipeline_tag": "feature-extraction",
+                "tags": ["gguf", "feature-extraction"],
+            }
+        ]
+        mock_client = MagicMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_factory.return_value = mock_client
+
+        runtime = LlamaCppRuntime(cache_dir=tmp_path)
+        refs = runtime.models_for_capability(Capability.EMBED)
+
+    assert len(refs) == 1
+    assert refs[0].name == "unit-test-org/Embed-Model-GGUF"
 
 
 # --- registry wiring --------------------------------------------------------------

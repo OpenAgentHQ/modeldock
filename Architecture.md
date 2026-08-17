@@ -355,6 +355,18 @@ A **searchable, versioned catalog** decoupled from any runtime.
 - **Implementations:**
   - `OllamaLibraryRegistry` — scrapes ollama.com, auto-detects metadata,
     caches locally (default). Built on `CachedCatalogRegistry`.
+  - `HuggingFaceCatalogProvider` (`adapters/registry/huggingface_catalog.py`)
+    — queries the Hugging Face Hub API (`filter=gguf`) live for GGUF-format
+    models, cached 24h. Neither LM Studio nor llama.cpp expose an online
+    catalog of their own — both consume GGUF repos directly from the Hub — so
+    `LMStudioRuntime`/`LlamaCppRuntime.models_for_category`/
+    `models_for_capability` construct one instance each (tagging results with
+    their own `RuntimeBackend`) and share the same on-disk cache, since it's
+    the same underlying GGUF universe either way. LM Studio falls back to a
+    small curated table (`adapters/runtimes/lmstudio_catalog.py`) when the Hub
+    is unreachable and no cache exists yet; llama.cpp, which has no catalog of
+    its own at all, returns an empty list in that case rather than the
+    shared Ollama-tag catalog's invalid names.
   - `BundledRegistry` — reads `catalog.json` (offline fallback).
   - `RemoteRegistry` — optional fetch/refresh from a URL/JSON for community
     updates without a package release.

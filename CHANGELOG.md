@@ -26,6 +26,33 @@ duplicating caching/indexing logic per source.
   duplicating the fetch/cache/index/`RegistryPort` logic inline; scraping,
   auto-detection, and caching behavior are unchanged
 
+---
+
+Live GGUF catalog: LM Studio and llama.cpp category/capability suggestions now
+come from the Hugging Face Hub instead of a hand-maintained static list (or,
+for llama.cpp, nothing at all).
+
+### Added
+
+- `HuggingFaceCatalogProvider` (`adapters/registry/huggingface_catalog.py`) —
+  live catalog built on `CachedCatalogRegistry` that queries the Hugging Face
+  Hub API (`filter=gguf`) for GGUF-format models, cached 24h; LM Studio and
+  llama.cpp share one on-disk cache since both address the same GGUF universe
+- `LlamaCppRuntime.models_for_category`/`models_for_capability` — llama.cpp
+  had no catalog of any kind before; category/capability installs previously
+  fell back to the shared Ollama-tag catalog, whose names are not valid
+  `--hf-repo` coordinates
+
+### Changed
+
+- `LMStudioRuntime.models_for_category`/`models_for_capability` now query the
+  live Hugging Face catalog first, falling back to the existing curated
+  `lmstudio_catalog.py` table only when the Hub is unreachable and no cache
+  exists yet — suggestions still work fully offline, they just may be a
+  shorter, point-in-time list instead of the live one
+- `LMStudioRuntime`/`LlamaCppRuntime` accept an optional `cache_dir` argument
+  (defaults to the standard ModelDock cache directory)
+
 ## [0.1.3] - 2026-07-19
 
 Dynamic catalog: replaced static `catalog.json` with live scraping of ollama.com.
