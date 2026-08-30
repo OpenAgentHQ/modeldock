@@ -29,13 +29,13 @@ Use fake `RuntimePort`/`RegistryPort`/`CachePort` fixtures (`tests/conftest.py`)
 
 ## Port-Contract Tests
 
-A shared test suite parameterized over every `RuntimePort`/`DownloaderPort` implementation. Guarantees each adapter honors the interface.
+A shared test suite in `tests/unit/test_port_contract.py` parameterized over every `RuntimePort`, `CachePort`, and `DownloaderPort` implementation using fake ports/clients. Guarantees each adapter honors the port contract without needing external daemons or network connections.
 
 ```bash
 pytest tests/unit -k contract
 ```
 
-New runtimes MUST pass this suite.
+Every new runtime adapter MUST be covered by this suite.
 
 ---
 

@@ -67,18 +67,25 @@ lmstudio = "modeldock.adapters.runtimes.lmstudio:LMStudioRuntime"
 
 ## Step 3: Add Port-Contract Tests
 
-Extend the shared test suite parameterized over all adapters:
+Extend the shared test suite in `tests/unit/test_port_contract.py` parameterized over all adapters.
+
+Every runtime adapter must have a factory function in `tests/unit/test_port_contract.py` wired with fake ports/clients (so no external daemon or network is required) and be registered in `_ALL_RUNTIME_FACTORIES` (as well as `_LIFECYCLE_RUNTIME_FACTORIES` or `_PLAN_ONLY_RUNTIME_FACTORIES` as appropriate):
 
 ```python
-# tests/unit/test_runtime_contract.py
-@pytest.mark.parametrize("runtime", [OllamaRuntime(), LMStudioRuntime()])
-def test_list_installed(runtime):
-    """All runtimes must return a list from list_installed."""
-    result = runtime.list_installed()
-    assert isinstance(result, list)
+# tests/unit/test_port_contract.py
+def _make_faked_myruntime() -> RuntimePort:
+    from modeldock.adapters.runtimes.myruntime import MyRuntime
+
+    runtime = MyRuntime()
+    runtime._client = _FakeMyClient()
+    runtime._availability = True
+    return runtime
+
+
+_ALL_RUNTIME_FACTORIES.append(_make_faked_myruntime)
 ```
 
-Ensure they pass:
+Ensure the port-contract test suite passes:
 
 ```bash
 pytest tests/unit -k contract

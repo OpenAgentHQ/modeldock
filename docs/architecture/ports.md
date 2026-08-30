@@ -121,7 +121,7 @@ class EventPort(Protocol):
 
 ## Port-Contract Test Suite
 
-Every adapter MUST pass the shared port-contract test suite — parameterized over all implementations. This guarantees new runtimes behave correctly.
+Every adapter MUST pass the shared port-contract test suite in `tests/unit/test_port_contract.py` — parameterized over all implementations using fake ports/clients. This guarantees new runtimes behave correctly.
 
 ```bash
 pytest tests/unit -k contract
