@@ -102,6 +102,9 @@ class FakeCache(CachePort):
     def set_model_config(self, ref: ModelRef, config: dict) -> None:
         self.entries.setdefault(self._key(ref), {})["user_config"] = config
 
+    def path(self) -> str:
+        return "/fake/cache"
+
     @staticmethod
     def _key(ref: ModelRef) -> str:
         return f"{ref.name}:{ref.tag}"

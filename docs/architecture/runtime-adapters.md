@@ -72,7 +72,7 @@ lmstudio = "modeldock.adapters.runtimes.lmstudio:LMStudioRuntime"
 
 ### 3. Add Port-Contract Tests
 
-Extend the shared test suite parameterized over all adapters.
+Extend the shared test suite in `tests/unit/test_port_contract.py` parameterized over all adapters using fake ports/clients. Every new runtime adapter must be included in this suite.
 
 ### 4. Document Backend-Specific Notes
 
