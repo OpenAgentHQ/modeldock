@@ -18,6 +18,7 @@ from modeldock.cli.commands.list import list_cmd
 from modeldock.cli.commands.load import load_app
 from modeldock.cli.commands.remove import remove_cmd
 from modeldock.cli.commands.run import run_cmd
+from modeldock.cli.commands.runtimes import runtimes_cmd
 from modeldock.cli.commands.search import search_cmd
 from modeldock.cli.commands.sources import sources_app
 from modeldock.cli.commands.update import update_cmd
@@ -47,6 +48,7 @@ app.command("info")(info_cmd)
 app.command("update")(update_cmd)
 app.command("remove")(remove_cmd)
 app.command("run")(run_cmd)
+app.command("runtimes")(runtimes_cmd)
 
 
 def _version_callback(value: bool) -> None:

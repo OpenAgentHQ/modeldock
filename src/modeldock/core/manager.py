@@ -30,10 +30,12 @@ from modeldock.core.registry import RegistryService
 from modeldock.domain.model import (
     Capability,
     Category,
+    Device,
     ModelInfo,
     ModelRef,
     ModelSpec,
     RuntimeBackend,
+    RuntimeStatus,
 )
 from modeldock.domain.source import SourceInfo, SourceTrust
 from modeldock.ports.cache import CachePort
@@ -228,6 +230,32 @@ class ModelManager:
     def runtime_status(self) -> Any:
         """Report the active runtime's availability and execution device."""
         return self._runtime.status()
+
+    def runtimes(self) -> List[RuntimeStatus]:
+        """Report every registered runtime backend and its current status.
+
+        Backs ``modeldock runtimes``. Probes each built-in and entry-point
+        backend so users can see which runtimes are reachable without
+        switching ``--backend`` one at a time. A backend that fails to probe
+        is reported as unavailable with the reason in ``details`` rather than
+        dropped from the list, so a broken plugin never hides the rest.
+        """
+        statuses: List[RuntimeStatus] = []
+        backends = sorted(self._runtime_registry.available_backends(), key=lambda b: b.value)
+        for backend in backends:
+            try:
+                statuses.append(self._runtime_registry.get(backend).status())
+            except Exception as exc:  # noqa: BLE001 - one bad adapter must not hide the others
+                self._logger.warning("Runtime %s failed to report status: %s", backend.value, exc)
+                statuses.append(
+                    RuntimeStatus(
+                        backend=backend,
+                        available=False,
+                        device=Device.UNKNOWN,
+                        details=f"probe failed: {exc}",
+                    )
+                )
+        return statuses
 
     def recommend(self, task: str) -> List[Any]:
         """Recommend models for a task."""

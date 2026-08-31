@@ -48,7 +48,7 @@ Bulk install recommended models for a category (e.g., `coding`, `vision`).
 ### List
 
 ```bash
-modeldock list
+modeldock list [--json]
 ```
 
 Browse the catalog.
@@ -58,7 +58,7 @@ Browse the catalog.
 ### Installed
 
 ```bash
-modeldock installed
+modeldock installed [--json]
 ```
 
 Models present locally.
@@ -68,7 +68,7 @@ Models present locally.
 ### Search
 
 ```bash
-modeldock search <query>
+modeldock search <query> [--json]
 ```
 
 Search by name, capability, or category across the live sources for the active
@@ -81,10 +81,39 @@ know which source holds it.
 ### Info
 
 ```bash
-modeldock info <model>
+modeldock info <model> [--json]
 ```
 
 Sizes, capabilities, variants, and the **Source** the metadata came from.
+
+---
+
+### Runtimes
+
+```bash
+modeldock runtimes [--json]
+```
+
+Report every registered runtime backend — built-in and plugin-provided — with
+whether it is currently reachable, the execution device it reports, and any
+models it has loaded. Use it to see which runtimes are usable without switching
+`--backend` one at a time.
+
+Example:
+
+```text
+                       Runtimes
++---------------------------------------------------------+
+| Backend  | Available | Device  | Loaded Models | Details |
+|----------+-----------+---------+---------------+---------|
+| llamacpp | no        | unknown | -             | -       |
+| lmstudio | no        | unknown | -             | -       |
+| ollama   | yes       | gpu     | llama3:8b     | -       |
++---------------------------------------------------------+
+```
+
+A backend that fails to probe is still listed, reported as unavailable with the
+reason in `Details`, so one broken plugin never hides the rest.
 
 ---
 
@@ -187,3 +216,36 @@ View or change configuration.
 
 - [Python API](python-api.md) — SDK reference
 - [Configuration](../user-guide/configuration.md) — config options
+
+---
+
+## JSON Output
+
+`list`, `search`, `installed`, `info`, and `runtimes` accept `--json` for
+scripting and tooling. The flag prints a single JSON document on **stdout** and
+nothing else, so it can be piped straight into `jq` or a script.
+
+```bash
+modeldock list --json | jq -r '.[].name'
+modeldock info llama3 --json | jq '.variants[].tag'
+modeldock runtimes --json | jq -r '.[] | select(.available) | .backend'
+```
+
+`info` emits a single object; the other four emit an array. Enums are rendered
+as their string values (`"chat"`, `"ollama"`, `"gpu"`), and absent optional
+fields as `null`.
+
+On failure the command still exits **1**, and with `--json` the error is
+written to **stderr** as a parseable object rather than plain text:
+
+```json
+{
+  "error": {
+    "type": "ModelNotFoundError",
+    "message": "Model 'nope' not found in the catalog."
+  }
+}
+```
+
+Keeping results on stdout and errors on stderr means `modeldock list --json > models.json`
+captures only valid JSON even when the command fails.
