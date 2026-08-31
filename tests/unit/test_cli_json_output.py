@@ -13,6 +13,7 @@ import json
 from typing import Any, List
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 import modeldock.cli.commands.info as info_cmd_mod
@@ -36,21 +37,7 @@ from modeldock.domain.model import (
 )
 from modeldock.domain.source import OLLAMA_OFFICIAL
 
-
-def _make_runner() -> CliRunner:
-    """Build a runner that keeps stdout and stderr separate.
-
-    Older Typer/Click needs an explicit ``mix_stderr=False``; newer versions
-    dropped the argument and split the streams by default.
-    """
-    try:
-        return CliRunner(mix_stderr=False)
-    except TypeError:
-        return CliRunner()
-
-
-# stderr must stay separate so the JSON error object can be asserted on its own.
-runner = _make_runner()
+runner = CliRunner()
 
 _SPEC = ModelSpec(
     name="llama3",
@@ -139,6 +126,23 @@ _ARGV = {
     "installed": ["installed"],
     "info": ["info", "llama3"],
     "runtimes": ["runtimes"],
+}
+
+# Typer's bundled CliRunner does not capture stderr on every supported version
+# (0.23.x accepts ``mix_stderr=False`` but drops the stream), so the stderr
+# contract is asserted by calling the command function directly and reading the
+# streams with capsys. That still exercises the real ``as_json=json_out``
+# wiring; only the transport differs.
+_DIRECT_CALLS = {
+    "list": lambda json_out: list_cmd_mod.list_cmd(json_out=json_out, debug=False),
+    "search": lambda json_out: search_cmd_mod.search_cmd(
+        query="chat", json_out=json_out, debug=False
+    ),
+    "installed": lambda json_out: installed_cmd_mod.installed_cmd(
+        backend=None, json_out=json_out, debug=False
+    ),
+    "info": lambda json_out: info_cmd_mod.info_cmd(model="llama3", json_out=json_out, debug=False),
+    "runtimes": lambda json_out: runtimes_cmd_mod.runtimes_cmd(json_out=json_out, debug=False),
 }
 
 
@@ -251,10 +255,14 @@ def test_search_json_reflects_the_query_results(stub_manager: None) -> None:
     assert [entry["name"] for entry in payload] == ["llama3"]
 
 
-def test_json_output_has_no_stderr_noise(stub_manager: None) -> None:
+def test_json_success_writes_nothing_to_stderr(
+    stub_manager: None, capsys: pytest.CaptureFixture[str]
+) -> None:
     # A script piping stdout must not have to filter anything out of stderr.
-    result = runner.invoke(app, ["list", "--json"])
-    assert result.stderr == ""
+    _DIRECT_CALLS["list"](True)
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert isinstance(json.loads(captured.out), list)
 
 
 # --- failure paths ---------------------------------------------------------
@@ -262,19 +270,32 @@ def test_json_output_has_no_stderr_noise(stub_manager: None) -> None:
 
 @pytest.mark.parametrize("command", ["list", "search", "installed", "info", "runtimes"])
 def test_json_flag_emits_a_json_error_object_on_failure(
-    command: str, raising_manager: None
+    command: str, raising_manager: None, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    result = runner.invoke(app, [*_ARGV[command], "--json"])
-    assert result.exit_code == 1
-    payload = json.loads(result.stderr)
+    with pytest.raises(typer.Exit) as excinfo:
+        _DIRECT_CALLS[command](True)
+    assert excinfo.value.exit_code == 1
+    captured = capsys.readouterr()
+    payload = json.loads(captured.err)
     assert payload["error"]["type"] == "ModelNotFoundError"
     assert "nope" in payload["error"]["message"]
+    # stdout must stay empty so a redirected file never holds partial output.
+    assert captured.out == ""
 
 
-def test_failure_without_json_flag_stays_plain_text(raising_manager: None) -> None:
-    result = runner.invoke(app, ["list"])
+@pytest.mark.parametrize("command", ["list", "search", "installed", "info", "runtimes"])
+def test_failure_exits_nonzero_through_the_cli(command: str, raising_manager: None) -> None:
+    result = runner.invoke(app, [*_ARGV[command], "--json"])
     assert result.exit_code == 1
-    assert result.stderr.startswith("Error: ")
+
+
+def test_failure_without_json_flag_stays_plain_text(
+    raising_manager: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(typer.Exit) as excinfo:
+        _DIRECT_CALLS["list"](False)
+    assert excinfo.value.exit_code == 1
+    assert capsys.readouterr().err.startswith("Error: ")
 
 
 # --- human output is unchanged ---------------------------------------------
