@@ -135,6 +135,33 @@ env var.
 
 ---
 
+## Scripting — JSON Output
+
+Every read-only discovery command has a `--json` flag for automation. It prints
+one JSON document on stdout and nothing else, so it pipes cleanly:
+
+```bash
+# Names of every catalog model
+modeldock list --json | jq -r '.[].name'
+
+# Every vision model's default tag
+modeldock search vision --json | jq -r '.[] | "\(.name):\(.default_tag)"'
+
+# Is a model installed?
+modeldock info llama3 --json | jq '.installed'
+
+# Which runtimes are reachable right now?
+modeldock runtimes --json | jq -r '.[] | select(.available) | .backend'
+```
+
+`info` returns a single object; `list`, `search`, `installed`, and `runtimes`
+return arrays. Errors go to stderr as `{"error": {"type": ..., "message": ...}}`
+with exit code 1, so stdout stays valid JSON either way.
+
+See the [CLI Reference](../sdk/cli.md#json-output) for the full contract.
+
+---
+
 ## Next Steps
 
 - [Install & Manage](install.md) — download and manage models

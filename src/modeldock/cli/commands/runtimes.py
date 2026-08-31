@@ -1,26 +1,25 @@
-"""CLI command: search."""
+"""CLI command: runtimes."""
 
 from __future__ import annotations
 
 import typer
 
-from modeldock.cli.console import print_error, render_json, render_models
+from modeldock.cli.console import print_error, render_json, render_runtimes
 from modeldock.core.manager import ModelManager
 
 
-def search_cmd(
-    query: str = typer.Argument(..., help="Name / capability / category"),
+def runtimes_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit machine-readable JSON"),
     debug: bool = typer.Option(False, "--debug", help="Show traceback"),
 ) -> None:
-    """Search the catalog by name, capability, or category."""
+    """Show every registered runtime backend and whether it is reachable."""
     try:
         mgr = ModelManager()
-        results = mgr.search(query)
+        statuses = mgr.runtimes()
         if json_out:
-            render_json(results)
+            render_json(statuses)
         else:
-            render_models(results)
+            render_runtimes(statuses)
     except Exception as exc:  # noqa: BLE001 - top-level CLI boundary
         print_error(exc, debug, as_json=json_out)
         raise typer.Exit(code=1)  # noqa: B904
