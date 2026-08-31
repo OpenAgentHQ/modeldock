@@ -19,17 +19,17 @@ def app_name() -> str:
 
 def user_config_dir() -> Path:
     """Return the per-user config directory for ModelDock."""
-    return Path(platformdirs.user_config_dir(app_name(), roaming=True))
+    return Path(platformdirs.user_config_dir(app_name(), appauthor=False, roaming=True))
 
 
 def user_cache_dir() -> Path:
     """Return the per-user cache directory for ModelDock."""
-    return Path(platformdirs.user_cache_dir(app_name()))
+    return Path(platformdirs.user_cache_dir(app_name(), appauthor=False))
 
 
 def user_data_dir() -> Path:
     """Return the per-user data directory for ModelDock."""
-    return Path(platformdirs.user_data_dir(app_name()))
+    return Path(platformdirs.user_data_dir(app_name(), appauthor=False))
 
 
 def system_config_dir() -> Path:
