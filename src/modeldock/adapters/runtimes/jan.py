@@ -2,12 +2,41 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, List
 
 from modeldock.adapters.runtimes.base import BaseRuntime
 from modeldock.common.errors import RuntimeUnavailableError
-from modeldock.domain.model import ModelRef, RuntimeBackend
+from modeldock.domain.model import Capability, ModelRef, RuntimeBackend
 from modeldock.ports.runtime import PullResult
+
+_JAN_CAPABILITY_MAP: dict[str, Capability] = {
+    "completion": Capability.COMPLETION,
+    "chat": Capability.CHAT,
+    "embeddings": Capability.EMBED,
+    "vision": Capability.VISION,
+    "reasoning": Capability.REASONING,
+    "tools": Capability.TOOL_USE,
+}
+
+
+def _map_jan_capabilities(raw_capabilities: object) -> List[Capability]:
+    """Map Jan capability strings without trusting runtime metadata shape."""
+    if not isinstance(raw_capabilities, Sequence) or isinstance(
+        raw_capabilities, (str, bytes, bytearray)
+    ):
+        return []
+
+    mapped: List[Capability] = []
+    seen: set[Capability] = set()
+    for raw_capability in raw_capabilities:
+        if not isinstance(raw_capability, str):
+            continue
+        capability = _JAN_CAPABILITY_MAP.get(raw_capability.strip().lower())
+        if capability is not None and capability not in seen:
+            mapped.append(capability)
+            seen.add(capability)
+    return mapped
 
 
 class JanRuntime(BaseRuntime):
