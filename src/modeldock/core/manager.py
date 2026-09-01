@@ -166,6 +166,11 @@ class ModelManager:
         RuntimeBackend.LLAMACPP: "llamacpp_gpu_layers",
     }
 
+    #: Config field holding the local model directory for file-based runtimes.
+    _MODELS_DIR_SETTING_FOR = {
+        RuntimeBackend.GPT4ALL: "gpt4all_models_dir",
+    }
+
     def _resolve_runtime(self, backend: RuntimeBackend, cfg: Settings) -> RuntimePort:
         # Apply the configured host at construction time so it always takes
         # effect (clients are built lazily and cached per instance). Backends
@@ -175,8 +180,15 @@ class ModelManager:
         host = getattr(cfg, host_field, None) if host_field else None
         gpu_layers_field = self._GPU_LAYERS_SETTING_FOR.get(backend)
         gpu_layers = getattr(cfg, gpu_layers_field, None) if gpu_layers_field else None
+        models_dir_field = self._MODELS_DIR_SETTING_FOR.get(backend)
+        models_dir = getattr(cfg, models_dir_field, None) if models_dir_field else None
         try:
-            runtime = self._runtime_registry.get(backend, host=host, gpu_layers=gpu_layers)
+            runtime = self._runtime_registry.get(
+                backend,
+                host=host,
+                gpu_layers=gpu_layers,
+                models_dir=models_dir,
+            )
         except KeyError as exc:
             raise RuntimeUnavailableError(backend.value) from exc
         if not runtime.is_available():

@@ -33,6 +33,10 @@ def test_settings_llamacpp_gpu_layers_defaults_to_none() -> None:
     assert Settings().llamacpp_gpu_layers is None
 
 
+def test_settings_gpt4all_models_dir_defaults_to_none() -> None:
+    assert Settings().gpt4all_models_dir is None
+
+
 def test_settings_llamacpp_gpu_layers_accepts_non_negative_int() -> None:
     assert Settings(llamacpp_gpu_layers=35).llamacpp_gpu_layers == 35
 
@@ -87,6 +91,14 @@ def test_load_settings_llamacpp_gpu_layers_invalid_env_falls_back(
     monkeypatch.setenv("MODELDOCK_LLAMACPP_GPU_LAYERS", "auto")
     s = load_settings()
     assert s.llamacpp_gpu_layers is None
+
+
+def test_load_settings_gpt4all_models_dir_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    models_dir = tmp_path / "gpt4all"
+    monkeypatch.setenv("MODELDOCK_GPT4ALL_MODELS_DIR", str(models_dir))
+    assert load_settings().gpt4all_models_dir == models_dir
 
 
 def test_default_cache_dir_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

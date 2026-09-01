@@ -46,6 +46,7 @@ class Settings(BaseModel):
     ollama_host: Optional[str] = None
     lmstudio_host: Optional[str] = None
     llamacpp_gpu_layers: Optional[int] = None
+    gpt4all_models_dir: Optional[Path] = None
     config_path: Optional[Path] = None
 
     @field_validator("log_level")
@@ -103,6 +104,9 @@ class Settings(BaseModel):
             f"{_ENV_PREFIX}CATALOG_SOURCE": self.catalog_source,
             f"{_ENV_PREFIX}AUTO_INSTALL": str(self.auto_install).lower(),
             f"{_ENV_PREFIX}CACHE_DIR": str(self.cache_dir),
+            f"{_ENV_PREFIX}GPT4ALL_MODELS_DIR": ""
+            if self.gpt4all_models_dir is None
+            else str(self.gpt4all_models_dir),
         }
 
 
@@ -181,6 +185,10 @@ def _apply_mapping(settings: Settings, data: Dict[str, Any], source: str = "conf
     if "llamacpp_gpu_layers" in data:
         raw = data["llamacpp_gpu_layers"]
         _safe_set(settings, "llamacpp_gpu_layers", raw if raw not in (None, "") else None, source)
+    if "gpt4all_models_dir" in data:
+        raw = data["gpt4all_models_dir"]
+        resolved_path = Path(str(raw)) if raw not in (None, "") else None
+        _safe_set(settings, "gpt4all_models_dir", resolved_path, source)
 
 
 def load_settings(
@@ -228,6 +236,7 @@ def load_settings(
         f"{_ENV_PREFIX}OLLAMA_HOST": "ollama_host",
         f"{_ENV_PREFIX}LMSTUDIO_HOST": "lmstudio_host",
         f"{_ENV_PREFIX}LLAMACPP_GPU_LAYERS": "llamacpp_gpu_layers",
+        f"{_ENV_PREFIX}GPT4ALL_MODELS_DIR": "gpt4all_models_dir",
     }
     env_data = {
         field_name: os.environ[env_key]

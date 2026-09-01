@@ -6,6 +6,7 @@ See Architecture.md S4/S14.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable, Dict, List, cast
 
 from modeldock.common.logging import get_logger
@@ -66,6 +67,7 @@ class RuntimeRegistry:
         backend: RuntimeBackend,
         host: str | None = None,
         gpu_layers: int | None = None,
+        models_dir: Path | None = None,
     ) -> RuntimePort:
         """Return a runtime instance for backend (entry points win).
 
@@ -88,6 +90,8 @@ class RuntimeRegistry:
                 clear()
         if gpu_layers is not None and hasattr(runtime, "_gpu_layers"):
             runtime._gpu_layers = gpu_layers
+        if models_dir is not None and hasattr(runtime, "_models_dir"):
+            runtime._models_dir = models_dir
         return runtime
 
     @staticmethod
