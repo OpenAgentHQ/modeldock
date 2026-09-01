@@ -45,6 +45,18 @@ class Category(str, Enum):
     REASONING = "reasoning"
     INSTRUCT = "instruct"
 
+    @property
+    def description(self) -> str:
+        """Return a human-readable description for CLI help and documentation."""
+        return {
+            Category.CHAT: "General-purpose conversational models",
+            Category.CODING: "Models optimized for code generation and completion",
+            Category.EMBEDDING: "Models that convert text into vector representations",
+            Category.VISION: "Models that understand images and text",
+            Category.REASONING: "Models optimized for multi-step reasoning",
+            Category.INSTRUCT: "Models tuned to follow instructions",
+        }[self]
+
     @classmethod
     def from_value(cls, value: str) -> Category:
         """Resolve a category from a string, case-insensitively."""

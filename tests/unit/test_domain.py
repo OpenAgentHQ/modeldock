@@ -32,6 +32,20 @@ def test_category_from_value() -> None:
         Category.from_value("nonsense")
 
 
+def test_category_descriptions() -> None:
+    expected = {
+        Category.CHAT: "General-purpose conversational models",
+        Category.CODING: "Models optimized for code generation and completion",
+        Category.EMBEDDING: "Models that convert text into vector representations",
+        Category.VISION: "Models that understand images and text",
+        Category.REASONING: "Models optimized for multi-step reasoning",
+        Category.INSTRUCT: "Models tuned to follow instructions",
+    }
+
+    assert {category: category.description for category in Category} == expected
+    assert len(Category) == 6
+
+
 def test_backend_from_value() -> None:
     assert RuntimeBackend.from_value("OLLAMA") == RuntimeBackend.OLLAMA
     assert RuntimeBackend.from_value("vllm") == RuntimeBackend.VLLM
