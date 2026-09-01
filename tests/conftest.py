@@ -94,7 +94,7 @@ class FakeCache(CachePort):
 
     def status(self) -> List[dict]:
         return list(self.entries.values())
-    
+
     def path(self) -> str:
         return "/fake/cache"
 

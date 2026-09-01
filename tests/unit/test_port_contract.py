@@ -45,6 +45,7 @@ from modeldock.domain.model import Category, ModelRef, ModelSpec, RuntimeBackend
 from modeldock.ports.cache import CachePort
 from modeldock.ports.downloader import DownloaderPort
 from modeldock.ports.runtime import PullResult, RuntimePort, RuntimeStatus
+from tests.conftest import FakeCache, FakeRuntime
 
 # =============================================================================
 # Universal RuntimePort contract — every adapter, regardless of capability.
@@ -58,8 +59,6 @@ def _all_runtime_implementations() -> List[RuntimePort]:
     below, so a new adapter added to the registry without a corresponding
     entry here fails loudly instead of silently going untested.
     """
-    from tests.conftest import FakeRuntime
-
     return [
         FakeRuntime(),
         OllamaRuntime(),
@@ -198,9 +197,7 @@ def _fake_lmstudio_runtime() -> LMStudioRuntime:
 
 
 _LIFECYCLE_FACTORIES: dict[str, Callable[[], RuntimePort]] = {
-    "FakeRuntime": lambda: __import__(
-        "tests.conftest", fromlist=["FakeRuntime"]
-    ).FakeRuntime(),
+    "FakeRuntime": FakeRuntime,
     "OllamaRuntime": _fake_ollama_runtime,
     "LMStudioRuntime": _fake_lmstudio_runtime,
 }
@@ -404,7 +401,6 @@ def test_registry_backend_coverage() -> None:
 def cache_factory(tmp_path: Path) -> Callable[[], List[CachePort]]:
     def _make() -> List[CachePort]:
         from modeldock.adapters.cache import FilesystemCache
-        from tests.conftest import FakeCache
 
         return [FakeCache(), FilesystemCache(tmp_path / "fs_cache")]
 
@@ -485,13 +481,21 @@ def test_downloader_conforms_to_protocol(downloader_impl: DownloaderPort) -> Non
 
 
 def test_downloader_pull_signature(downloader_impl: DownloaderPort) -> None:
-    """Every DownloaderPort must define pull(ref, progress=None) -> Any.
+    """pull() must fail via the domain error hierarchy, not silently.
 
-    Behavior differs deliberately (HttpDownloader refuses; OllamaPullDownloader
-    delegates), so this only checks the call is well-formed, not the result.
+    HttpDownloader.pull() is intentionally unsupported (that adapter requires
+    download(spec, dest), not pull(ref)) and always raises DownloadError.
+    OllamaPullDownloader.pull() delegates to the real Ollama runtime, which
+    is not running in this test environment, so it too raises DownloadError
+    (wrapping the underlying RuntimeUnavailableError) rather than returning a
+    fabricated success or letting an unrelated exception escape. Asserting
+    the concrete type and a non-empty message gives this test actual
+    signal — it fails if a future change makes pull() return silently, or
+    raise something outside the ModelDockError hierarchy.
     """
+    from modeldock.common.errors import DownloadError
+
     ref = ModelRef.parse("llama3")
-    try:
+    with pytest.raises(DownloadError) as exc_info:
         downloader_impl.pull(ref)
-    except Exception as exc:  # noqa: BLE001 - any typed/domain error is fine
-        assert isinstance(exc, Exception)
+    assert str(exc_info.value)
