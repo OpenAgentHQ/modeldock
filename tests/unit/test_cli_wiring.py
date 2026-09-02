@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -12,7 +13,7 @@ import modeldock.cli.commands.config as config_cmd
 import modeldock.cli.factory as factory
 from modeldock.cli.app import app
 from modeldock.common.errors import ConfigError
-from modeldock.domain.model import ModelRef, RuntimeBackend
+from modeldock.domain.model import Category, ModelRef, RuntimeBackend
 
 runner = CliRunner()
 
@@ -83,6 +84,17 @@ def test_unknown_backend_exits_nonzero(recording_manager: type[_RecordingManager
     result = runner.invoke(app, ["install", "llama3", "--backend", "nope"])
     assert result.exit_code != 0
     assert "Unknown backend" in result.output
+
+
+def test_install_category_help_includes_descriptions() -> None:
+    result = runner.invoke(app, ["install-category", "--help"])
+    stripped = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.output)
+    output = " ".join(stripped.replace("│", " ").split())
+
+    assert result.exit_code == 0
+    for category in Category:
+        assert category.value in output
+        assert category.description in output
 
 
 def test_global_backend_reaches_subcommands(monkeypatch: pytest.MonkeyPatch) -> None:
