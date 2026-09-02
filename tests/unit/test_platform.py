@@ -1,15 +1,12 @@
-"""Unit tests for common/platform.py, including Windows-specific path handling."""
+   from __future__ import annotations
 
-from __future__ import annotations
+   import os
+   import sys
+   from pathlib import Path
 
-import os
-import sys
-from pathlib import Path
+   import pytest
 
-import pytest
-
-from modeldock.common import platform as md_platform
-
+   from modeldock.common import platform as md_platform
 
 # ---------------------------------------------------------------------------
 # Mocked tests — run on every OS, force Windows-style platformdirs output.
