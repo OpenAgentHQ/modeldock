@@ -173,7 +173,7 @@ modeldock/
 │       │   │   ├── http.py        # generic HTTP downloader
 │       │   │   └── ollama_pull.py # delegates to `ollama pull`/API
 │       │   ├── cache/
-│       │   │   └── filesystem.py  # filesystem cache + manifest
+│       │   │   └── filesystem.py  # manifest + content-addressed blob store
 │       │   └── progress/
 │       │       ├── rich_progress.py
 │       │       ├── tqdm_progress.py
@@ -222,7 +222,7 @@ standard.
 | `adapters/runtimes/` | Concrete runtime integrations. Each implements `RuntimePort`. Ollama ships first; others are stubs implementing the interface. |
 | `adapters/registry/` | Provides the searchable model catalog. `ollama_library.py` scrapes ollama.com for the full model list with auto-detected categories/capabilities; `bundled.py` is a static fallback; `remote.py` can refresh from a URL. |
 | `adapters/downloaders/` | Moves bytes. `ollama_pull.py` wraps Ollama's native pull; `http.py` is a generic fallback for runtimes that expose direct URLs. |
-| `adapters/cache/` | Tracks what is installed/downloaded so we never re-fetch. Filesystem manifest + content hashing. |
+| `adapters/cache/` | Tracks what is installed/downloaded so we never re-fetch. Filesystem manifest + a content-addressed blob store, so identical weights are stored once and reference-counted. |
 | `adapters/progress/` | Pluggable progress reporters (rich, tqdm, silent) implementing `ProgressPort`. |
 | `cli/` | Thin delivery layer. Translates argv → core service calls. No business logic. |
 | `common/` | Config loading, logging bootstrap, platform/OS helpers, shared HTTP client, base errors. |
@@ -379,14 +379,26 @@ Goal: "never re-download installed models" + offline cache management.
      manifest mapping `ModelRef → installed_tag + sha`.
   2. **Download artifact cache** — for runtimes that download raw files
      (llama.cpp GGUF, GPT4All), a content-addressed store
-     (`cache/<sha256[:16]>/model.gguf`) so re-installs are instant offline.
+     (`cache/blobs/<sha256[:2]>/<sha256>`) so re-installs are instant offline.
+     The readable path a user hands to `llama-server`
+     (`cache/models/<name>/<tag>.gguf`) is a hard link onto the blob, so
+     byte-identical weights cost disk exactly once however many refs point at
+     them. Filesystems without hard links fall back to a copy.
 - **Manifest:** `cache/manifest.json` (or per-backend) recording
-  `ref, tag, size, sha256, pulled_at, source`.
+  `ref, tag, size, sha256, pulled_at, source` — plus `blob` (the digest that
+  reference-counts the stored weights) and `path` (the linked artifact) for
+  entries the cache owns bytes for.
 - **Smart caching logic:** `CacheService.is_fresh(ref)` compares requested
-  tag/spec against manifest + runtime state. `cache.clean()` removes partial
-  downloads and orphaned artifacts not referenced by any installed model.
+  tag/spec against manifest + runtime state. When the catalog publishes a
+  variant's `sha256` and those bytes are already stored, `install()` skips the
+  download outright and just links. `cache.clean()` removes partial downloads
+  and orphaned artifacts not referenced by any installed model, including
+  blobs no manifest entry points at; `evict()` reclaims a blob only once its
+  last referencing entry is gone.
 - **Content hashing** (SHA-256) makes the cache path-independent and
-  self-validating — aligns with the content-hash-cache pattern.
+  self-validating — aligns with the content-hash-cache pattern. The blob API
+  lives behind `ContentStorePort`, separate from `CachePort` so manifest-only
+  caches stay valid implementations.
 - **Offline mode:** if `auto_install` is off or network unavailable, `load()`
   fails fast with a clear "model not installed and offline" message rather than
   hanging.
