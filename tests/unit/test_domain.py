@@ -33,6 +33,7 @@ def test_category_from_value() -> None:
 
 
 def test_category_descriptions() -> None:
+    # Pin exact wording so accidental rewording is caught in CI.
     expected = {
         Category.CHAT: "General-purpose conversational models",
         Category.CODING: "Models optimized for code generation and completion",
@@ -43,7 +44,6 @@ def test_category_descriptions() -> None:
     }
 
     assert {category: category.description for category in Category} == expected
-    assert len(Category) == 6
 
 
 def test_backend_from_value() -> None:

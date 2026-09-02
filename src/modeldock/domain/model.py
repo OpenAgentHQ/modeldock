@@ -38,24 +38,25 @@ class Capability(str, Enum):
 class Category(str, Enum):
     """High-level model categories used for discovery and bulk install."""
 
-    CHAT = "chat"
-    CODING = "coding"
-    EMBEDDING = "embedding"
-    VISION = "vision"
-    REASONING = "reasoning"
-    INSTRUCT = "instruct"
+    _description: str
+
+    def __new__(cls, value: str, description: str) -> Category:
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj._description = description
+        return obj
+
+    CHAT = ("chat", "General-purpose conversational models")
+    CODING = ("coding", "Models optimized for code generation and completion")
+    EMBEDDING = ("embedding", "Models that convert text into vector representations")
+    VISION = ("vision", "Models that understand images and text")
+    REASONING = ("reasoning", "Models optimized for multi-step reasoning")
+    INSTRUCT = ("instruct", "Models tuned to follow instructions")
 
     @property
     def description(self) -> str:
         """Return a human-readable description for CLI help and documentation."""
-        return {
-            Category.CHAT: "General-purpose conversational models",
-            Category.CODING: "Models optimized for code generation and completion",
-            Category.EMBEDDING: "Models that convert text into vector representations",
-            Category.VISION: "Models that understand images and text",
-            Category.REASONING: "Models optimized for multi-step reasoning",
-            Category.INSTRUCT: "Models tuned to follow instructions",
-        }[self]
+        return self._description
 
     @classmethod
     def from_value(cls, value: str) -> Category:

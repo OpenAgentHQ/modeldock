@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -87,7 +88,8 @@ def test_unknown_backend_exits_nonzero(recording_manager: type[_RecordingManager
 
 def test_install_category_help_includes_descriptions() -> None:
     result = runner.invoke(app, ["install-category", "--help"])
-    output = " ".join(result.output.replace("│", " ").split())
+    stripped = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", result.output)
+    output = " ".join(stripped.replace("│", " ").split())
 
     assert result.exit_code == 0
     for category in Category:
