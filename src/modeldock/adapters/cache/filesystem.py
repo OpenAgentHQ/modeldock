@@ -223,6 +223,10 @@ class FilesystemCache:
         blob = self.blob_path(digest)
         if self._is_stored(blob):
             self._logger.debug("Reusing stored weights %s for %s", digest[:12], src.name)
+            # A reused blob keeps its original mtime, so the orphan grace
+            # period would not cover it. Mark it live before the caller gets
+            # the chance to record it.
+            self._touch(blob)
             src.unlink()
             return blob, digest
         blob.parent.mkdir(parents=True, exist_ok=True)
@@ -242,6 +246,10 @@ class FilesystemCache:
         if not blob.is_file():
             raise CacheError(f"Cannot link missing blob: {blob}")
         dest.parent.mkdir(parents=True, exist_ok=True)
+        # Linking is the "these weights are in use" signal, and it happens on
+        # every install path — including the one that skips the download
+        # entirely — so it is where the grace period gets refreshed.
+        self._touch(blob)
         if dest.exists():
             if self._same_file(dest, blob):
                 return dest
@@ -290,6 +298,20 @@ class FilesystemCache:
         except OSError:
             return False
 
+    def _inside_cache(self, path: Path) -> Optional[Path]:
+        """Return ``path`` resolved if it lives under the cache dir, else None."""
+        try:
+            resolved = path.resolve()
+            root = self._cache_dir.resolve()
+        except OSError:
+            return None
+        return resolved if resolved.is_relative_to(root) else None
+
+    def _touch(self, path: Path) -> None:
+        """Refresh a blob's mtime so the orphan grace period covers it."""
+        with contextlib.suppress(OSError):
+            os.utime(path, None)
+
     @staticmethod
     def _older_than(path: Path, cutoff: float) -> bool:
         """Return True if ``path`` was last written before ``cutoff``.
@@ -333,11 +355,20 @@ class FilesystemCache:
         }
 
     def _remove_artifact(self, entry: Dict[str, Any]) -> None:
-        """Unlink the readable artifact path recorded for an entry."""
+        """Unlink the readable artifact path recorded for an entry.
+
+        The manifest is a plain file a user can edit, so its ``path`` is
+        untrusted input: only paths inside the cache directory are ever
+        unlinked. Anything else — a hand-edited entry, a manifest carried over
+        from another cache root — is left alone.
+        """
         recorded = entry.get("path")
         if not recorded:
             return
-        artifact = Path(str(recorded))
+        artifact = self._inside_cache(Path(str(recorded)))
+        if artifact is None:
+            self._logger.debug("Refusing to remove artifact outside the cache: %s", recorded)
+            return
         try:
             artifact.unlink(missing_ok=True)
         except OSError as exc:
@@ -356,11 +387,20 @@ class FilesystemCache:
             current = current.parent
 
     def _gc_blob(self, digest: str, entries: Dict[str, Any]) -> bool:
-        """Delete the blob for ``digest`` unless an entry still references it."""
+        """Delete the blob for ``digest`` unless an entry still references it.
+
+        ``digest`` comes from the manifest, so it is validated rather than
+        pasted into a path: a malformed value names no blob we stored and must
+        never be able to point outside the blob store.
+        """
         digest = (digest or "").strip().lower()
         if not digest or digest in self._referenced_digests(entries):
             return False
-        blob = self._blobs_dir / digest[:2] / digest
+        try:
+            blob = self.blob_path(digest)
+        except CacheError:
+            self._logger.debug("Ignoring malformed blob digest in manifest: %r", digest)
+            return False
         try:
             blob.unlink(missing_ok=True)
         except OSError as exc:

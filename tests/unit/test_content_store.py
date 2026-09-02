@@ -346,6 +346,69 @@ def test_clean_force_wipes_entries_artifacts_and_blobs(tmp_path: Path) -> None:
     assert _blobs(cache_dir) == []
 
 
+def test_reused_blob_is_protected_from_a_concurrent_clean(tmp_path: Path) -> None:
+    """Deduping onto an old blob must renew its grace period.
+
+    Otherwise an install that reuses an unreferenced blob loses it to a
+    `cache clean` running between store_blob() and record_artifact().
+    """
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    old, _ = cache.store_blob(_artifact(tmp_path, "first.gguf"))
+    _backdate(old)
+
+    reused, digest = cache.store_blob(_artifact(tmp_path, "second.gguf"))
+
+    assert reused == old
+    assert cache.clean() == []
+    assert cache.has_blob(digest)
+
+
+def test_link_into_renews_the_grace_period(tmp_path: Path) -> None:
+    """The skip-the-download path only links, so linking must mark liveness."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    blob, digest = cache.store_blob(_artifact(tmp_path, "model.gguf"))
+    _backdate(blob)
+
+    cache.link_into(blob, cache_dir / "models" / "llama3" / "latest.gguf")
+
+    assert cache.clean() == []
+    assert cache.has_blob(digest)
+
+
+def test_artifact_outside_the_cache_is_never_unlinked(tmp_path: Path) -> None:
+    """manifest.json is user-editable, so its path field is untrusted."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    outsider = tmp_path / "important.txt"
+    outsider.write_text("not ours to delete")
+    ref = ModelRef.parse("llama3")
+    cache.record_artifact(ref, ref.tag, DIGEST, 1, outsider)
+
+    cache.evict(ref)
+
+    assert outsider.exists(), "evict must not touch files outside the cache dir"
+    assert cache.status() == []
+
+
+def test_malformed_blob_digest_deletes_nothing(tmp_path: Path) -> None:
+    """A hand-edited digest must not become a path into the filesystem."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    _install(cache, cache_dir, "llama3")
+    outsider = tmp_path / "important.txt"
+    outsider.write_text("not ours to delete")
+    data = cache._read_manifest()
+    data["entries"]["llama3:latest"]["blob"] = f"../../{outsider.name}"
+    cache._write_manifest(data)
+
+    cache.evict(ModelRef.parse("llama3"))
+
+    assert outsider.exists()
+    assert cache.status() == []
+
+
 def test_clean_removes_the_artifact_of_a_corrupt_entry(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     cache = FilesystemCache(cache_dir)
