@@ -31,6 +31,11 @@ _BLOBS_DIRNAME = "blobs"
 
 _HEX_DIGITS = frozenset("0123456789abcdef")
 
+#: Grace period before an unreferenced blob may be pruned. Covers the window
+#: between ``store_blob`` and ``record_artifact`` so a concurrent ``clean()``
+#: cannot delete weights an in-flight install has not registered yet.
+_ORPHAN_GRACE_SECONDS = 300
+
 
 class FilesystemCache:
     """Filesystem-backed cache with a JSON manifest and a blob store."""
@@ -132,7 +137,7 @@ class FilesystemCache:
         if removed:
             self._write_manifest(data)
         # Weights no surviving entry points at are dead bytes: reclaim them.
-        removed.extend(self._prune_orphan_blobs(entries))
+        removed.extend(self._prune_orphan_blobs(entries, force=force))
         self._cleanup_tmp_files()
         return removed
 
@@ -286,6 +291,17 @@ class FilesystemCache:
             return False
 
     @staticmethod
+    def _older_than(path: Path, cutoff: float) -> bool:
+        """Return True if ``path`` was last written before ``cutoff``.
+
+        An unreadable stat means "do not touch it" — never delete on a guess.
+        """
+        try:
+            return path.stat().st_mtime < cutoff
+        except OSError:
+            return False
+
+    @staticmethod
     def _same_file(left: Path, right: Path) -> bool:
         try:
             return os.path.samefile(left, right)
@@ -353,14 +369,26 @@ class FilesystemCache:
         self._prune_empty_dirs(blob.parent)
         return True
 
-    def _prune_orphan_blobs(self, entries: Dict[str, Any]) -> List[str]:
-        """Remove stored weights no manifest entry references any more."""
+    def _prune_orphan_blobs(self, entries: Dict[str, Any], force: bool = False) -> List[str]:
+        """Remove stored weights no manifest entry references any more.
+
+        A blob becomes referenced only once the install that stored it reaches
+        ``record_artifact``. Sweeping unconditionally would let a concurrent
+        ``cache clean`` delete weights out from under an install still between
+        those two steps, so freshly written blobs are left alone for
+        ``_ORPHAN_GRACE_SECONDS``. ``force=True`` is an explicit "wipe
+        everything" and skips the grace period.
+        """
         if not self._blobs_dir.is_dir():
             return []
         referenced = self._referenced_digests(entries)
+        cutoff = time.time() - _ORPHAN_GRACE_SECONDS
         removed: List[str] = []
         for blob in sorted(self._blobs_dir.rglob("*")):
             if not blob.is_file() or blob.name in referenced:
+                continue
+            if not force and not self._older_than(blob, cutoff):
+                self._logger.debug("Keeping recently stored blob %s", blob.name)
                 continue
             try:
                 blob.unlink()

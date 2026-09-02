@@ -283,12 +283,19 @@ def test_evict_without_a_blob_entry_is_a_noop(tmp_path: Path) -> None:
     assert cache.status() == []
 
 
+def _backdate(path: Path, seconds: int = 3600) -> None:
+    """Age a file past the orphan grace period."""
+    stamp = path.stat().st_mtime - seconds
+    os.utime(path, (stamp, stamp))
+
+
 def test_clean_prunes_orphan_blobs(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     cache = FilesystemCache(cache_dir)
     _install(cache, cache_dir, "llama3")
-    # A blob nothing references — e.g. an interrupted install.
-    cache.store_blob(_artifact(tmp_path, "orphan.gguf", OTHER_WEIGHTS))
+    # A blob nothing references — e.g. an install interrupted long ago.
+    orphan, _ = cache.store_blob(_artifact(tmp_path, "orphan.gguf", OTHER_WEIGHTS))
+    _backdate(orphan)
     assert len(_blobs(cache_dir)) == 2
 
     removed = cache.clean()
@@ -296,6 +303,34 @@ def test_clean_prunes_orphan_blobs(tmp_path: Path) -> None:
     assert removed == [f"blobs/{OTHER_DIGEST}"]
     assert len(_blobs(cache_dir)) == 1
     assert cache.has_blob(DIGEST), "referenced weights are never pruned"
+
+
+def test_clean_keeps_a_freshly_stored_blob(tmp_path: Path) -> None:
+    """An install between store_blob and record_artifact must survive a clean.
+
+    Otherwise a concurrent ``modeldock cache clean`` deletes the weights an
+    in-flight install has not registered yet.
+    """
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    _, digest = cache.store_blob(_artifact(tmp_path, "in-flight.gguf"))
+
+    removed = cache.clean()
+
+    assert removed == []
+    assert cache.has_blob(digest)
+
+
+def test_clean_force_ignores_the_grace_period(tmp_path: Path) -> None:
+    """force=True is an explicit wipe — freshness does not protect a blob."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    cache.store_blob(_artifact(tmp_path, "in-flight.gguf"))
+
+    removed = cache.clean(force=True)
+
+    assert removed == [f"blobs/{DIGEST}"]
+    assert _blobs(cache_dir) == []
 
 
 def test_clean_force_wipes_entries_artifacts_and_blobs(tmp_path: Path) -> None:
@@ -315,6 +350,7 @@ def test_clean_removes_the_artifact_of_a_corrupt_entry(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     cache = FilesystemCache(cache_dir)
     dest = _install(cache, cache_dir, "llama3")
+    _backdate(cache.blob_path(DIGEST))
     data = cache._read_manifest()
     data["entries"]["llama3:latest"].pop("sha256")
     cache._write_manifest(data)

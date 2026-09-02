@@ -136,7 +136,7 @@ def test_every_label_has_at_least_one_glob() -> None:
 # ─── Globs match the real tree ──────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("label,glob", list(_all_globs()), ids=lambda v: str(v))
+@pytest.mark.parametrize("label,glob", list(_all_globs()), ids=str)
 def test_glob_matches_a_real_path(label: str, glob: str, repo_files: List[str]) -> None:
     """A glob matching nothing means the mapping went stale."""
     matcher = _glob_to_regex(glob)
