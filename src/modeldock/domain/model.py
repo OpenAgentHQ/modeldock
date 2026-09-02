@@ -144,6 +144,18 @@ class ModelSpec(BaseModel):
         )
 
 
+class ScoredModelSpec(BaseModel):
+    """A ``ModelSpec`` paired with its relevance score for a search query.
+
+    Returned by ``RegistryService.search`` (see issue #79). Not normalized to
+    any fixed range — ``score`` is only meaningful for ordering results
+    against each other within the same query.
+    """
+
+    spec: ModelSpec
+    score: float
+
+
 class ModelInfo(BaseModel):
     """Catalog metadata enriched with the tags/versions installed locally.
 
@@ -276,6 +288,19 @@ class ModelRef(BaseModel):
 class ModelAlias:
     """Pure alias-resolution rules mapping friendly names to canonical specs."""
 
+    # --- Relevance weights for match_score, per issue #79 ---
+    # Name outranks capability, which outranks description. Sub-tiers within
+    # "name" reward how close the match is (exact > prefix > substring).
+    _NAME_EXACT = 100.0
+    _NAME_PREFIX = 60.0
+    _NAME_SUBSTRING = 30.0
+    _ALIAS_EXACT = 45.0
+    _ALIAS_SUBSTRING = 20.0
+    _CAPABILITY_EXACT = 20.0
+    _CAPABILITY_SUBSTRING = 10.0
+    _CATEGORY_MATCH = 8.0
+    _DESCRIPTION_SUBSTRING = 3.0
+
     @staticmethod
     def resolve(value: str, registry: RegistryPort) -> ModelSpec:
         """Resolve a friendly name/tag to a ``ModelSpec`` via the registry.
@@ -302,3 +327,56 @@ class ModelAlias:
         haystack += [a.lower() for a in spec.aliases]
         haystack += [c.value for c in spec.capabilities]
         return any(q in field for field in haystack)
+
+    @classmethod
+    def match_score(cls, spec: ModelSpec, query: str) -> float:
+        """Score how relevant ``spec`` is to a free-text search ``query``.
+
+        Ranking order (issue #79): name > capability > description, with
+        alias and category treated as name-adjacent and capability-adjacent
+        signals respectively. Higher is more relevant; 0.0 means no match
+        (including for an empty/whitespace-only query — callers should treat
+        that as "no query", unlike ``matches_query``, which treats it as
+        "match everything").
+
+        ``Capability`` and ``Category`` are ``str`` subclasses; ``.value`` is
+        used rather than ``str(member)`` because plain-Enum ``__str__``
+        formatting (e.g. ``"Capability.CHAT"``) is inconsistent across the
+        Python 3.9–3.12 versions this project supports, while ``.value`` is
+        always the plain lowercase string.
+        """
+        q = query.strip().lower()
+        if not q:
+            return 0.0
+
+        name = spec.name.lower()
+        aliases = [a.lower() for a in spec.aliases]
+        capabilities = [c.value for c in spec.capabilities]
+        category = spec.category.value
+        description = spec.description.lower()
+
+        score = 0.0
+
+        if name == q:
+            score += cls._NAME_EXACT
+        elif name.startswith(q):
+            score += cls._NAME_PREFIX
+        elif q in name:
+            score += cls._NAME_SUBSTRING
+        elif q in aliases:
+            score += cls._ALIAS_EXACT
+        elif any(q in alias for alias in aliases):
+            score += cls._ALIAS_SUBSTRING
+
+        if q in capabilities:
+            score += cls._CAPABILITY_EXACT
+        elif any(q in cap for cap in capabilities):
+            score += cls._CAPABILITY_SUBSTRING
+
+        if q == category or q in category:
+            score += cls._CATEGORY_MATCH
+
+        if q in description:
+            score += cls._DESCRIPTION_SUBSTRING
+
+        return score
