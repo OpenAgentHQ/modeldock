@@ -17,6 +17,7 @@ import pytest
 from modeldock.adapters.cache import FilesystemCache
 from modeldock.common.config import Settings
 from modeldock.common.errors import CacheError
+from modeldock.core.manager import ModelManager
 from modeldock.domain.model import Category, ModelRef, ModelSpec, ModelVariant
 from modeldock.ports.cache import CachePort, ContentStorePort
 
@@ -409,6 +410,62 @@ def test_malformed_blob_digest_deletes_nothing(tmp_path: Path) -> None:
     assert cache.status() == []
 
 
+def test_store_blob_restores_weights_that_vanished_after_the_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The download must not be discarded against a blob that just disappeared.
+
+    Simulates a `cache clean --force` landing between the existence check and
+    the point where store_blob drops the staged download.
+    """
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    cache.store_blob(_artifact(tmp_path, "first.gguf"))
+
+    def _delete_instead_of_touch(path: Path) -> None:
+        Path(path).unlink(missing_ok=True)
+
+    monkeypatch.setattr(cache, "_touch", _delete_instead_of_touch)
+
+    blob, digest = cache.store_blob(_artifact(tmp_path, "second.gguf"))
+
+    assert digest == DIGEST
+    assert blob.read_bytes() == WEIGHTS, "the second copy must be stored, not dropped"
+    assert cache.has_blob(DIGEST)
+
+
+def test_prune_respects_entries_recorded_after_the_snapshot(tmp_path: Path) -> None:
+    """A blob referenced by the manifest survives a stale caller snapshot."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    _install(cache, cache_dir, "llama3")
+    _backdate(cache.blob_path(DIGEST))
+
+    # An empty snapshot is what a caller holds if the entry was written after
+    # it read the manifest.
+    removed = cache._prune_orphan_blobs({})
+
+    assert removed == []
+    assert cache.has_blob(DIGEST)
+
+
+def test_transaction_nests_with_locked_operations(tmp_path: Path) -> None:
+    """A caller-held transaction must not deadlock the operations inside it."""
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    ref = ModelRef.parse("llama3")
+    dest = cache_dir / "models" / "llama3" / "latest.gguf"
+
+    with cache.transaction():
+        blob, digest = cache.store_blob(_artifact(tmp_path, "model.gguf"))
+        cache.link_into(blob, dest)
+        cache.record_artifact(ref, ref.tag, digest, blob.stat().st_size, dest)
+        assert cache.clean() == []
+
+    assert cache.is_fresh(ref)
+    assert dest.read_bytes() == WEIGHTS
+
+
 def test_clean_removes_the_artifact_of_a_corrupt_entry(tmp_path: Path) -> None:
     cache_dir = tmp_path / "cache"
     cache = FilesystemCache(cache_dir)
@@ -456,6 +513,13 @@ def _spec(name: str, sha256: Optional[str] = None) -> ModelSpec:
     )
 
 
+def _seed(registry: Any, specs: List[ModelSpec]) -> Any:
+    """Point a FakeRegistry at ``specs`` and hand it back."""
+    registry.specs = list(specs)
+    registry.by_name = {spec.name: spec for spec in specs}
+    return registry
+
+
 def _manager(
     tmp_path: Path,
     specs: List[ModelSpec],
@@ -463,13 +527,9 @@ def _manager(
     fake_registry: Any,
     fake_runtime: Any,
 ) -> Any:
-    from modeldock.core.manager import ModelManager
-
-    fake_registry.specs = list(specs)
-    fake_registry.by_name = {spec.name: spec for spec in specs}
     manager = ModelManager(
         settings=Settings(cache_dir=tmp_path),
-        registry=fake_registry,
+        registry=_seed(fake_registry, specs),
         runtime=fake_runtime,
         cache=FilesystemCache(tmp_path),
     )

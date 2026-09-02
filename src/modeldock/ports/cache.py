@@ -7,7 +7,16 @@ See Architecture.md §8.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol, Tuple, runtime_checkable
+from typing import (
+    Any,
+    ContextManager,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    runtime_checkable,
+)
 
 from modeldock.domain.model import ModelRef
 
@@ -29,10 +38,12 @@ class CachePort(Protocol):
         ...
 
     def clean(self, force: bool = False) -> List[str]:
-        """Remove orphaned/partial artifacts; return removed paths.
+        """Remove orphaned/partial artifacts; return what was removed.
 
         Safe by default: only corrupt/partial manifest entries are removed.
-        Pass ``force=True`` to wipe every cached entry.
+        Pass ``force=True`` to wipe every cached entry. Identifiers come in two
+        distinguishable shapes — manifest entries as ``name:tag``, and any
+        reclaimed content-addressed weights as ``blobs/<sha256>``.
         """
         ...
 
@@ -98,4 +109,13 @@ class ContentStorePort(Protocol):
         path: Path,
     ) -> None:
         """Record a stored artifact together with its blob digest and path."""
+        ...
+
+    def transaction(self) -> ContextManager[None]:
+        """Serialize a multi-step mutation against other processes.
+
+        Individual operations are already atomic; wrap a sequence that must
+        not be interleaved — check a digest, link it, record it — so a
+        concurrent ``clean()`` cannot reclaim weights mid-install.
+        """
         ...

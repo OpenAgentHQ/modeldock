@@ -380,22 +380,39 @@ class ModelManager:
             )
             return
 
-        if expected and store.has_blob(expected):
-            self._logger.info(
-                "Reusing cached weights for %s (sha256 %s)", ref.qualified_name(), expected[:12]
-            )
-            blob, digest = store.blob_path(expected), expected
-        else:
-            self._http_downloader.download(spec, dest, self._progress)
+        # Each step runs under the cache lock so a concurrent `cache clean`
+        # cannot reclaim the weights between checking for them and recording
+        # them. The download itself stays outside the lock.
+        if expected:
+            with store.transaction():
+                if store.has_blob(expected):
+                    self._logger.info(
+                        "Reusing cached weights for %s (sha256 %s)",
+                        ref.qualified_name(),
+                        expected[:12],
+                    )
+                    blob = store.blob_path(expected)
+                    store.link_into(blob, dest)
+                    store.record_artifact(
+                        ref=ref,
+                        tag=ref.tag,
+                        sha256=expected,
+                        size_bytes=blob.stat().st_size,
+                        path=dest,
+                    )
+                    return
+
+        self._http_downloader.download(spec, dest, self._progress)
+        with store.transaction():
             blob, digest = store.store_blob(dest, expected or None)
-        store.link_into(blob, dest)
-        store.record_artifact(
-            ref=ref,
-            tag=ref.tag,
-            sha256=digest,
-            size_bytes=blob.stat().st_size,
-            path=dest,
-        )
+            store.link_into(blob, dest)
+            store.record_artifact(
+                ref=ref,
+                tag=ref.tag,
+                sha256=digest,
+                size_bytes=blob.stat().st_size,
+                path=dest,
+            )
 
     def _model_dest(self, spec: ModelSpec, ref: ModelRef) -> Path:
         """Filesystem path for an HTTP-downloaded GGUF artifact."""

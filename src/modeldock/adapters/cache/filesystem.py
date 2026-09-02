@@ -20,8 +20,9 @@ import os
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, ContextManager, Dict, Iterator, List, Optional, Set, Tuple, cast
 
+from modeldock.adapters.cache.lock import LOCK_FILENAME, CacheLock
 from modeldock.common.errors import CacheError
 from modeldock.common.logging import get_logger
 from modeldock.domain.model import ModelRef
@@ -46,7 +47,23 @@ class FilesystemCache:
         self._blobs_dir = self._cache_dir / _BLOBS_DIRNAME
         self._logger = get_logger("cache.filesystem")
         self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._lock = CacheLock(self._cache_dir / LOCK_FILENAME)
         self._cleanup_tmp_files()
+
+    def transaction(self) -> ContextManager[None]:
+        """Serialize a multi-step cache mutation against other processes.
+
+        Reads (``is_fresh``, ``status``, ``get_record``) stay lock-free: the
+        manifest is only ever replaced atomically, so a reader sees the old or
+        the new file, never a partial one. Callers that must span several
+        mutations — check a digest, link it, record it — wrap them in this.
+        """
+        return self._transaction()
+
+    @contextlib.contextmanager
+    def _transaction(self) -> Iterator[None]:
+        with self._lock:
+            yield
 
     def _cleanup_tmp_files(self) -> None:
         for tmp in self._cache_dir.rglob("*.tmp"):
@@ -98,22 +115,25 @@ class FilesystemCache:
         size_bytes: int,
         extras: Optional[Dict[str, Any]] = None,
     ) -> None:
-        data = self._read_manifest()
-        entries = data.setdefault("entries", {})
-        existing = entries.get(self._key(ref), {})
-        entry: Dict[str, Any] = {
-            "name": ref.name,
-            "tag": tag,
-            "sha256": sha256,
-            "size_bytes": size_bytes,
-            "pulled_at": int(time.time()),
-            "source": ref.backend.value if ref.backend else "unknown",
-        }
-        if "user_config" in existing:
-            entry["user_config"] = existing["user_config"]
-        entry.update(extras or {})
-        entries[self._key(ref)] = entry
-        self._write_manifest(data)
+        # Read-modify-write: without the lock a concurrent record/evict would
+        # be silently lost when this write replaces the manifest.
+        with self._lock:
+            data = self._read_manifest()
+            entries = data.setdefault("entries", {})
+            existing = entries.get(self._key(ref), {})
+            entry: Dict[str, Any] = {
+                "name": ref.name,
+                "tag": tag,
+                "sha256": sha256,
+                "size_bytes": size_bytes,
+                "pulled_at": int(time.time()),
+                "source": ref.backend.value if ref.backend else "unknown",
+            }
+            if "user_config" in existing:
+                entry["user_config"] = existing["user_config"]
+            entry.update(extras or {})
+            entries[self._key(ref)] = entry
+            self._write_manifest(data)
 
     def get_record(self, ref: ModelRef) -> Optional[Dict[str, Any]]:
         data = self._read_manifest()
@@ -121,35 +141,42 @@ class FilesystemCache:
         return cast(Optional[Dict[str, Any]], entry)
 
     def clean(self, force: bool = False) -> List[str]:
+        """Remove orphaned/partial entries and unreferenced weights.
+
+        Returns what was removed, in two distinguishable shapes: manifest
+        entries as ``name:tag`` and reclaimed weights as ``blobs/<sha256>``.
+        """
         removed: List[str] = []
-        data = self._read_manifest()
-        entries = data.get("entries", {})
-        for key, entry in list(entries.items()):
-            # Safe default: only drop entries that are corrupt/partial (missing
-            # the fields we recorded). ModelDock does not manage the model blobs
-            # for Ollama, so a missing artifact file is NOT grounds for removal.
-            # force=True wipes every entry.
-            if force or not isinstance(entry, dict) or not entry.get("sha256"):
-                removed.append(key)
-                del entries[key]
-                if isinstance(entry, dict):
-                    self._remove_artifact(entry)
-        if removed:
-            self._write_manifest(data)
-        # Weights no surviving entry points at are dead bytes: reclaim them.
-        removed.extend(self._prune_orphan_blobs(entries, force=force))
-        self._cleanup_tmp_files()
+        with self._lock:
+            data = self._read_manifest()
+            entries = data.get("entries", {})
+            for key, entry in list(entries.items()):
+                # Safe default: only drop entries that are corrupt/partial
+                # (missing the fields we recorded). ModelDock does not manage
+                # the model blobs for Ollama, so a missing artifact file is NOT
+                # grounds for removal. force=True wipes every entry.
+                if force or not isinstance(entry, dict) or not entry.get("sha256"):
+                    removed.append(key)
+                    del entries[key]
+                    if isinstance(entry, dict):
+                        self._remove_artifact(entry)
+            if removed:
+                self._write_manifest(data)
+            # Weights no surviving entry points at are dead bytes: reclaim them.
+            removed.extend(self._prune_orphan_blobs(entries, force=force))
+            self._cleanup_tmp_files()
         return removed
 
     def evict(self, ref: ModelRef) -> None:
-        data = self._read_manifest()
-        entries = data.get("entries", {})
-        entry = entries.pop(self._key(ref), None)
-        self._write_manifest(data)
-        if not isinstance(entry, dict):
-            return
-        self._remove_artifact(entry)
-        self._gc_blob(str(entry.get("blob") or ""), entries)
+        with self._lock:
+            data = self._read_manifest()
+            entries = data.get("entries", {})
+            entry = entries.pop(self._key(ref), None)
+            self._write_manifest(data)
+            if not isinstance(entry, dict):
+                return
+            self._remove_artifact(entry)
+            self._gc_blob(str(entry.get("blob") or ""), entries)
 
     def status(self) -> List[Dict[str, Any]]:
         data = self._read_manifest()
@@ -169,10 +196,11 @@ class FilesystemCache:
         return cast(Optional[Dict[str, Any]], entry.get("user_config"))
 
     def set_model_config(self, ref: ModelRef, config: Dict[str, Any]) -> None:
-        data = self._read_manifest()
-        entries = data.setdefault("entries", {})
-        entries.setdefault(self._key(ref), {})["user_config"] = config
-        self._write_manifest(data)
+        with self._lock:
+            data = self._read_manifest()
+            entries = data.setdefault("entries", {})
+            entries.setdefault(self._key(ref), {})["user_config"] = config
+            self._write_manifest(data)
 
     @staticmethod
     def sha256_of(path: Path, chunk_size: int = 1024 * 1024) -> str:
@@ -221,18 +249,22 @@ class FilesystemCache:
                     f"SHA-256 mismatch for {src.name} (expected {expected}, got {digest})"
                 )
         blob = self.blob_path(digest)
-        if self._is_stored(blob):
-            self._logger.debug("Reusing stored weights %s for %s", digest[:12], src.name)
-            # A reused blob keeps its original mtime, so the orphan grace
-            # period would not cover it. Mark it live before the caller gets
-            # the chance to record it.
-            self._touch(blob)
-            src.unlink()
+        with self._lock:
+            if self._is_stored(blob):
+                # A reused blob keeps its original mtime, so the orphan grace
+                # period would not cover it. Mark it live, then confirm it is
+                # still there: discarding ``src`` against a blob that vanished
+                # between the two checks would throw away the only copy.
+                self._touch(blob)
+                if self._is_stored(blob):
+                    self._logger.debug("Reusing stored weights %s for %s", digest[:12], src.name)
+                    src.unlink()
+                    return blob, digest
+                self._logger.debug("Stored blob %s disappeared; re-storing", digest[:12])
+            blob.parent.mkdir(parents=True, exist_ok=True)
+            self._move(src, blob)
+            self._logger.debug("Stored weights %s (%d bytes)", digest[:12], blob.stat().st_size)
             return blob, digest
-        blob.parent.mkdir(parents=True, exist_ok=True)
-        self._move(src, blob)
-        self._logger.debug("Stored weights %s (%d bytes)", digest[:12], blob.stat().st_size)
-        return blob, digest
 
     def link_into(self, blob: Path, dest: Path) -> Path:
         """Expose ``blob`` at ``dest`` without copying its bytes.
@@ -243,23 +275,24 @@ class FilesystemCache:
         """
         blob = Path(blob)
         dest = Path(dest)
-        if not blob.is_file():
-            raise CacheError(f"Cannot link missing blob: {blob}")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        # Linking is the "these weights are in use" signal, and it happens on
-        # every install path — including the one that skips the download
-        # entirely — so it is where the grace period gets refreshed.
-        self._touch(blob)
-        if dest.exists():
-            if self._same_file(dest, blob):
-                return dest
-            dest.unlink()
-        try:
-            os.link(blob, dest)
-        except (OSError, NotImplementedError) as exc:
-            self._logger.debug("Hard link unavailable (%s); copying %s instead", exc, blob.name)
-            shutil.copy2(blob, dest)
-        return dest
+        with self._lock:
+            if not blob.is_file():
+                raise CacheError(f"Cannot link missing blob: {blob}")
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            # Linking is the "these weights are in use" signal, and it happens
+            # on every install path — including the one that skips the download
+            # entirely — so it is where the grace period gets refreshed.
+            self._touch(blob)
+            if dest.exists():
+                if self._same_file(dest, blob):
+                    return dest
+                dest.unlink()
+            try:
+                os.link(blob, dest)
+            except (OSError, NotImplementedError) as exc:
+                self._logger.debug("Hard link unavailable (%s); copying %s instead", exc, blob.name)
+                shutil.copy2(blob, dest)
+            return dest
 
     def record_artifact(
         self,
@@ -418,10 +451,16 @@ class FilesystemCache:
         those two steps, so freshly written blobs are left alone for
         ``_ORPHAN_GRACE_SECONDS``. ``force=True`` is an explicit "wipe
         everything" and skips the grace period.
+
+        ``entries`` is the caller's post-removal snapshot; it is unioned with a
+        fresh read of the manifest so an entry written by a process that did
+        not take the lock still protects its weights.
         """
         if not self._blobs_dir.is_dir():
             return []
         referenced = self._referenced_digests(entries)
+        if not force:
+            referenced |= self._referenced_digests(self._read_manifest().get("entries", {}))
         cutoff = time.time() - _ORPHAN_GRACE_SECONDS
         removed: List[str] = []
         for blob in sorted(self._blobs_dir.rglob("*")):
