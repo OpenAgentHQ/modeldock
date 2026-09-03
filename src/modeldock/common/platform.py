@@ -34,7 +34,7 @@ def user_data_dir() -> Path:
 
 def system_config_dir() -> Path:
     """Return the system-wide config directory (may not exist)."""
-    return Path(platformdirs.site_config_dir(app_name()))
+    return Path(platformdirs.site_config_dir(app_name(), appauthor=False))
 
 
 def default_cache_dir() -> Path:
