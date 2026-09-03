@@ -1,7 +1,10 @@
+"""Unit tests for common/platform.py, including Windows-specific path handling."""
+
 from __future__ import annotations
 
 import os
 import sys
+from unittest.mock import MagicMock
 from pathlib import Path
 
 import pytest
@@ -12,46 +15,39 @@ from modeldock.common import platform as md_platform
 # Mocked tests — run on every OS, force Windows-style platformdirs output.
 # ---------------------------------------------------------------------------
 
+
 class TestWindowsPathsMocked:
     """Force platformdirs to return Windows-style paths and check our wrappers."""
 
     def test_user_config_dir_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            md_platform.platformdirs,
-            "user_config_dir",
-            lambda name, appauthor=False, roaming=True: r"C:\Users\test\AppData\Roaming\modeldock",
-        )
+        mock_fn = MagicMock(return_value=r"C:\Users\test\AppData\Roaming\modeldock")
+        monkeypatch.setattr(md_platform.platformdirs, "user_config_dir", mock_fn)
         result = md_platform.user_config_dir()
+        mock_fn.assert_called_once_with("modeldock", appauthor=False, roaming=True)
         assert isinstance(result, Path)
         assert result == Path(r"C:\Users\test\AppData\Roaming\modeldock")
 
     def test_user_cache_dir_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            md_platform.platformdirs,
-            "user_cache_dir",
-            lambda name, appauthor=False: r"C:\Users\test\AppData\Local\modeldock\Cache",
-        )
+        mock_fn = MagicMock(return_value=r"C:\Users\test\AppData\Local\modeldock\Cache")
+        monkeypatch.setattr(md_platform.platformdirs, "user_cache_dir", mock_fn)
         result = md_platform.user_cache_dir()
+        mock_fn.assert_called_once_with("modeldock", appauthor=False)
         assert isinstance(result, Path)
         assert result == Path(r"C:\Users\test\AppData\Local\modeldock\Cache")
 
     def test_user_data_dir_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            md_platform.platformdirs,
-            "user_data_dir",
-            lambda name, appauthor=False: r"C:\Users\test\AppData\Local\modeldock",
-        )
+        mock_fn = MagicMock(return_value=r"C:\Users\test\AppData\Local\modeldock")
+        monkeypatch.setattr(md_platform.platformdirs, "user_data_dir", mock_fn)
         result = md_platform.user_data_dir()
+        mock_fn.assert_called_once_with("modeldock", appauthor=False)
         assert isinstance(result, Path)
         assert result == Path(r"C:\Users\test\AppData\Local\modeldock")
 
     def test_system_config_dir_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(
-            md_platform.platformdirs,
-            "site_config_dir",
-            lambda name: r"C:\ProgramData\modeldock",
-        )
+        mock_fn = MagicMock(return_value=r"C:\ProgramData\modeldock")
+        monkeypatch.setattr(md_platform.platformdirs, "site_config_dir", mock_fn)
         result = md_platform.system_config_dir()
+        mock_fn.assert_called_once_with("modeldock", appauthor=False)
         assert isinstance(result, Path)
         assert result == Path(r"C:\ProgramData\modeldock")
 
@@ -59,11 +55,8 @@ class TestWindowsPathsMocked:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("MODELDOCK_CACHE_DIR", raising=False)
-        monkeypatch.setattr(
-            md_platform.platformdirs,
-            "user_cache_dir",
-            lambda name, appauthor=False: r"C:\Users\test\AppData\Local\modeldock",
-        )
+        mock_fn = MagicMock(return_value=r"C:\Users\test\AppData\Local\modeldock")
+        monkeypatch.setattr(md_platform.platformdirs, "user_cache_dir", mock_fn)
         result = md_platform.default_cache_dir()
         assert result == Path(r"C:\Users\test\AppData\Local\modeldock") / "models"
 
@@ -89,15 +82,18 @@ class TestWindowsPathsMocked:
 # behavior rather than mocks.
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only path behavior")
 class TestWindowsPathsReal:
+    """Exercise real (unmocked) platformdirs output on an actual Windows host."""
+
     def test_is_windows_true_on_real_windows(self) -> None:
         assert md_platform.is_windows() is True
 
     def test_user_config_dir_under_real_appdata(self) -> None:
         result = md_platform.user_config_dir()
-        appdata = os.environ["APPDATA"]
-        assert str(result).lower().startswith(appdata.lower())
+        appdata = os.environ.get("APPDATA", "")
+        assert appdata and str(result).lower().startswith(appdata.lower())
 
     def test_user_config_dir_not_doubled(self) -> None:
         """Regression test: appauthor must not default to appname
@@ -114,10 +110,16 @@ class TestWindowsPathsReal:
         result = md_platform.user_cache_dir()
         assert str(result).lower().count("modeldock") == 1
 
+    def test_user_data_dir_not_doubled(self) -> None:
+        """Regression test: appauthor must not default to appname for the
+        data dir either (mirrors the config/cache doubling bug)."""
+        result = md_platform.user_data_dir()
+        assert str(result).lower().count("modeldock") == 1
+
     def test_paths_use_backslash_separators(self) -> None:
-        result = md_platform.user_config_dir()
         # Real Windows paths render with backslashes via str(Path).
-        assert "\\" in str(result)
+        assert "\\" in str(md_platform.user_config_dir())
+        assert "\\" in str(md_platform.user_cache_dir())
 
     def test_default_cache_dir_env_override_with_windows_drive_letter(
         self, monkeypatch: pytest.MonkeyPatch
