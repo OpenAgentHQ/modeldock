@@ -156,6 +156,20 @@ def render_sources(sources: List[Any]) -> None:
     console.print(table)
 
 
+def render_verify(results: List[Any]) -> None:
+    """Render verify results (name, ok) pairs as a rich table."""
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title="Verify Results")
+    table.add_column("Name")
+    table.add_column("Status")
+    for name, ok in results:
+        table.add_row(name, "[green]OK[/]" if ok else "[red]FAILED[/]")
+    console.print(table)
+
+
 __all__ = [
     "print_error",
     "render_installed",
@@ -163,5 +177,6 @@ __all__ = [
     "render_models",
     "render_runtimes",
     "render_sources",
+    "render_verify",
     "to_jsonable",
 ]

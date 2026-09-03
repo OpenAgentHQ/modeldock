@@ -22,6 +22,7 @@ from modeldock.cli.commands.runtimes import runtimes_cmd
 from modeldock.cli.commands.search import search_cmd
 from modeldock.cli.commands.sources import sources_app
 from modeldock.cli.commands.update import update_cmd
+from modeldock.cli.commands.verify import verify_cmd
 from modeldock.common.logging import configure_logging
 
 # Allowed log levels surfaced to the user via --help and validated in the CLI
@@ -46,6 +47,7 @@ app.command("installed")(installed_cmd)
 app.command("search")(search_cmd)
 app.command("info")(info_cmd)
 app.command("update")(update_cmd)
+app.command("verify")(verify_cmd)
 app.command("remove")(remove_cmd)
 app.command("run")(run_cmd)
 app.command("runtimes")(runtimes_cmd)
