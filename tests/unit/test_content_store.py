@@ -210,6 +210,33 @@ def test_link_into_falls_back_to_copy_without_hard_links(
     assert dest.read_bytes() == WEIGHTS
 
 
+def test_link_into_never_copies_onto_the_blob_itself(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Losing the link race must not truncate the weights being published.
+
+    If another process links the same blob to ``dest`` first, our os.link
+    fails — and copying onto a destination that shares the blob's inode would
+    destroy it.
+    """
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    blob, _ = cache.store_blob(_artifact(tmp_path, "model.gguf"))
+    dest = cache_dir / "models" / "llama3" / "latest.gguf"
+    real_link = os.link
+
+    def _lose_the_race(src: Any, dst: Any, **kwargs: Any) -> None:
+        real_link(src, dst)  # the other process's link lands first
+        raise FileExistsError(dst)  # ours fails
+
+    monkeypatch.setattr(os, "link", _lose_the_race)
+
+    assert cache.link_into(blob, dest) == dest
+    assert blob.read_bytes() == WEIGHTS, "the blob must survive the lost race"
+    assert dest.read_bytes() == WEIGHTS
+    assert len(_blobs(cache_dir)) == 1
+
+
 def test_link_into_missing_blob_raises(tmp_path: Path) -> None:
     cache = FilesystemCache(tmp_path / "cache")
     with pytest.raises(CacheError, match="missing blob"):
@@ -410,6 +437,23 @@ def test_malformed_blob_digest_deletes_nothing(tmp_path: Path) -> None:
     assert cache.status() == []
 
 
+def test_store_blob_marks_stored_weights_as_fresh(tmp_path: Path) -> None:
+    """A rename carries the source's mtime, which must not age the blob.
+
+    Weights staged from an older file would otherwise land already past the
+    grace period and be reclaimed by the very next clean().
+    """
+    cache_dir = tmp_path / "cache"
+    cache = FilesystemCache(cache_dir)
+    src = _artifact(tmp_path, "staged.gguf")
+    _backdate(src, seconds=86400)
+
+    _, digest = cache.store_blob(src)
+
+    assert cache.clean() == [], "freshly stored weights must not be pruned"
+    assert cache.has_blob(digest)
+
+
 def test_store_blob_restores_weights_that_vanished_after_the_check(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -422,10 +466,15 @@ def test_store_blob_restores_weights_that_vanished_after_the_check(
     cache = FilesystemCache(cache_dir)
     cache.store_blob(_artifact(tmp_path, "first.gguf"))
 
-    def _delete_instead_of_touch(path: Path) -> None:
-        Path(path).unlink(missing_ok=True)
+    calls = {"count": 0}
 
-    monkeypatch.setattr(cache, "_touch", _delete_instead_of_touch)
+    def _delete_on_first_touch(path: Path) -> None:
+        # Only the reuse-path touch races; the touch after storing is harmless.
+        calls["count"] += 1
+        if calls["count"] == 1:
+            Path(path).unlink(missing_ok=True)
+
+    monkeypatch.setattr(cache, "_touch", _delete_on_first_touch)
 
     blob, digest = cache.store_blob(_artifact(tmp_path, "second.gguf"))
 

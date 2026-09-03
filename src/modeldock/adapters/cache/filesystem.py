@@ -263,6 +263,10 @@ class FilesystemCache:
                 self._logger.debug("Stored blob %s disappeared; re-storing", digest[:12])
             blob.parent.mkdir(parents=True, exist_ok=True)
             self._move(src, blob)
+            # A rename (and copy2) carries the source's mtime over, so weights
+            # staged from an older file would land already past the orphan
+            # grace period and be pruned on the next clean().
+            self._touch(blob)
             self._logger.debug("Stored weights %s (%d bytes)", digest[:12], blob.stat().st_size)
             return blob, digest
 
@@ -290,9 +294,25 @@ class FilesystemCache:
             try:
                 os.link(blob, dest)
             except (OSError, NotImplementedError) as exc:
+                if self._same_file(dest, blob):
+                    # Another process linked the same blob here between our
+                    # unlink and our link. The destination already *is* these
+                    # weights, and copying onto a shared inode would truncate
+                    # the blob we are publishing.
+                    return dest
                 self._logger.debug("Hard link unavailable (%s); copying %s instead", exc, blob.name)
-                shutil.copy2(blob, dest)
+                self._copy_into(blob, dest)
             return dest
+
+    def _copy_into(self, blob: Path, dest: Path) -> None:
+        """Copy ``blob`` to ``dest`` via a temp file, never writing in place."""
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
+        try:
+            shutil.copy2(blob, tmp)
+            tmp.replace(dest)
+        except OSError as exc:
+            tmp.unlink(missing_ok=True)
+            raise CacheError(f"Could not place {blob.name} at {dest}: {exc}") from exc
 
     def record_artifact(
         self,
