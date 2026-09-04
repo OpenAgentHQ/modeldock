@@ -7,9 +7,10 @@ can lose an entry or reclaim weights an in-flight install has not registered
 yet. All mutating cache operations are serialized through one lock file.
 
 Best effort by design. If the lock cannot be taken within ``timeout`` the
-caller proceeds without it rather than failing a user's install — never worse
-than the unsynchronized behaviour it replaces. The lock is advisory: it only
-constrains processes that take it.
+caller falls back to unsynchronized access rather than blocking the user's
+install. That is not a guarantee of safety: two processes that both fall back
+are exactly as exposed as they were before the lock existed. The lock is
+advisory — it only constrains processes that take it.
 """
 
 from __future__ import annotations

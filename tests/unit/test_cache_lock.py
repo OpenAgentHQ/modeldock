@@ -42,8 +42,13 @@ def test_is_reentrant_within_a_thread(tmp_path: Path) -> None:
 
 def test_releases_on_exception(tmp_path: Path) -> None:
     lock = _lock(tmp_path)
-    with pytest.raises(RuntimeError), lock:
-        raise RuntimeError("boom")
+    # Nested rather than combined: __exit__ still receives the exception, but
+    # the reachability of what follows stays obvious to readers and analyzers.
+    # CodeQL reads the combined form as unreachable code, so ruff's preference
+    # for merging these two context managers is suppressed here deliberately.
+    with pytest.raises(RuntimeError):  # noqa: SIM117
+        with lock:
+            raise RuntimeError("boom")
     assert not lock.held
     # Still usable afterwards.
     with lock:

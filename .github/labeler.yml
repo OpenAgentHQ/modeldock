@@ -41,6 +41,11 @@
       - any-glob-to-any-file:
           - "tests/**"
 
+# pyproject.toml and uv.lock live here rather than under "area: core" because
+# this project's pyproject is mostly tooling config ([tool.ruff], [tool.mypy],
+# [tool.bandit], [tool.pytest.ini_options]). A dependency bump therefore lands
+# "area: ci"; since labeling is additive (sync-labels is off), a maintainer can
+# add "area: core" on top and it will not be stripped.
 "area: ci":
   - changed-files:
       - any-glob-to-any-file:

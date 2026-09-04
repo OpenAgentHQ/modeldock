@@ -340,8 +340,12 @@ class FilesystemCache:
     @staticmethod
     def _normalize_digest(sha256: str) -> str:
         digest = (sha256 or "").strip().lower()
-        if len(digest) != 64 or not set(digest) <= _HEX_DIGITS:
-            raise CacheError(f"Not a valid SHA-256 digest: {sha256!r}")
+        if len(digest) != 64:
+            raise CacheError(
+                f"Expected a 64-character SHA-256 digest, got {len(digest)}: {sha256!r}"
+            )
+        if not set(digest) <= _HEX_DIGITS:
+            raise CacheError(f"SHA-256 digest contains non-hex characters: {sha256!r}")
         return digest
 
     @staticmethod
@@ -472,9 +476,11 @@ class FilesystemCache:
         ``_ORPHAN_GRACE_SECONDS``. ``force=True`` is an explicit "wipe
         everything" and skips the grace period.
 
-        ``entries`` is the caller's post-removal snapshot; it is unioned with a
-        fresh read of the manifest so an entry written by a process that did
-        not take the lock still protects its weights.
+        ``entries`` is the caller's post-removal snapshot, unioned with a fresh
+        manifest read in case another process wrote an entry after the caller
+        read it. That covers processes that have already recorded; an install
+        still between ``store_blob`` and ``record_artifact`` is protected by
+        the grace period instead.
         """
         if not self._blobs_dir.is_dir():
             return []
@@ -484,8 +490,10 @@ class FilesystemCache:
         cutoff = time.time() - _ORPHAN_GRACE_SECONDS
         removed: List[str] = []
         for blob in sorted(self._blobs_dir.rglob("*")):
-            if not blob.is_file() or blob.name in referenced:
-                continue
+            if not blob.is_file():
+                continue  # shard directories and anything else that is not a blob
+            if blob.name in referenced:
+                continue  # a manifest entry still points at these weights
             if not force and not self._older_than(blob, cutoff):
                 self._logger.debug("Keeping recently stored blob %s", blob.name)
                 continue

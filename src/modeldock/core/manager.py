@@ -404,6 +404,9 @@ class ModelManager:
 
         self._http_downloader.download(spec, dest, self._progress)
         with store.transaction():
+            # store_blob consumes dest (it is moved into the blob store, or
+            # discarded when those bytes are already there); link_into then
+            # re-creates dest as a hard link onto the stored blob.
             blob, digest = store.store_blob(dest, expected or None)
             store.link_into(blob, dest)
             store.record_artifact(
