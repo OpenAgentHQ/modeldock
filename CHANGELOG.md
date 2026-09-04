@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- Content-addressed blob store in `FilesystemCache` — downloaded weights live
+  at `cache/blobs/<sha256[:2]>/<sha256>` and are exposed at
+  `cache/models/<name>/<tag>.gguf` through a hard link, so byte-identical
+  weights are stored exactly once no matter how many refs point at them
+  (falls back to a copy where hard links are unavailable)
+- `ContentStorePort` (`ports/cache.py`) — optional companion to `CachePort`
+  for caches that own artifact bytes (`has_blob`, `blob_path`, `store_blob`,
+  `link_into`, `record_artifact`); manifest-only caches remain valid
+- `.github/workflows/labeler.yml` + `.github/labeler.yml` — pull requests are
+  labeled by the areas they touch (`area: cli`, `core`, `adapters`, `docs`,
+  `tests`, `ci`)
+
+### Changed
+
+- `ModelManager.install()` skips the download entirely when the catalog
+  publishes a variant's `sha256` and those bytes are already stored, making a
+  duplicate install instant and offline-capable
+- `FilesystemCache.evict()` now unlinks the artifact and reference-counts the
+  blob, reclaiming weights only when the last entry referencing them is gone;
+  `clean()` additionally prunes blobs no manifest entry points at
+
 ## [0.2.0] - 2026-08-28
 
 Live GGUF catalogs, composite registry, third-party catalog plugins, and

@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PR Area Labeler for ModelDock
+# ─────────────────────────────────────────────────────────────────────────────
+# Labels every pull request by the areas it touches (cli / core / adapters /
+# docs / tests / ci) so triage does not have to open the diff to route a PR.
+#
+# Mapping lives in .github/labeler.yml — edit that file to add or move globs.
+#
+# Trigger: pull_request_target, so pull requests from forks (the common case
+# for outside contributors) get a token that can actually write labels. The
+# workflow checks out nothing and runs no PR code, which is what keeps
+# pull_request_target safe here.
+#
+# Permissions: pull-requests: write (apply labels), issues: write (create the
+# area labels the first time they are used), contents: read.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: PR Labeler
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+# One labeling run per PR; a new push supersedes the in-flight run.
+concurrency:
+  group: labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: Apply area labels
+    runs-on: ubuntu-latest
+
+    steps:
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 1: Make sure the area labels exist (with sensible colors)
+      # ─────────────────────────────────────────────────────────────────────
+      # Idempotent: a label that already exists is left exactly as the
+      # maintainers configured it (422 = already exists → skip, never patch).
+      - name: Ensure area labels exist
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const AREA_LABELS = [
+              { name: 'area: cli',      color: '1d76db', description: 'Command-line interface (src/modeldock/cli)' },
+              { name: 'area: core',     color: '0e8a16', description: 'Core services, domain, ports, common' },
+              { name: 'area: adapters', color: '5319e7', description: 'Runtime, registry, downloader, cache adapters' },
+              { name: 'area: docs',     color: '0075ca', description: 'Documentation, examples, README' },
+              { name: 'area: tests',    color: 'fbca04', description: 'Test suite' },
+              { name: 'area: ci',       color: 'c5def5', description: 'CI, packaging, tooling config' },
+            ];
+
+            for (const label of AREA_LABELS) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                console.log(`Created label "${label.name}"`);
+              } catch (error) {
+                if (error.status === 422) {
+                  console.log(`Label "${label.name}" already exists, leaving it as-is`);
+                } else {
+                  // Never fail the run over label bookkeeping — the labeler
+                  // step below reports anything it genuinely cannot apply.
+                  console.log(`Could not create "${label.name}": ${error.message}`);
+                }
+              }
+            }
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Step 2: Apply labels from the PR's changed paths
+      # ─────────────────────────────────────────────────────────────────────
+      # sync-labels: false — additive only. A label a maintainer added by hand
+      # is never stripped just because no glob matches it.
+      - name: Apply labels from changed paths
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: false

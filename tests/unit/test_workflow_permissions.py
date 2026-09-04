@@ -349,3 +349,38 @@ class TestReleaseWorkflow:
         assert effective.get("id-token") != "write", (
             "id-token: write leaked to release-artifacts via top-level permissions"
         )
+
+
+class TestLabelerWorkflow:
+    """Permissions for labeler.yml (path-based PR area labels)."""
+
+    @pytest.fixture(autouse=True)
+    def _load(self) -> None:
+        self.data = _load_workflow("labeler.yml")
+
+    def test_top_level_permissions(self) -> None:
+        perms = _get_top_permissions(self.data)
+        assert perms == {
+            "contents": "read",
+            "pull-requests": "write",
+            "issues": "write",
+        }
+
+    def test_label_job_inherits_top_level(self) -> None:
+        job_perms = _get_job_permissions(self.data, "label")
+        assert job_perms is None
+
+    def test_runs_on_pull_request_target(self) -> None:
+        """Fork PRs only get a writable token via pull_request_target."""
+        # PyYAML parses the 'on' key as boolean True.
+        triggers = self.data.get("on", self.data.get(True, {}))
+        assert "pull_request_target" in triggers, (
+            "labeler.yml must use pull_request_target so PRs from forks get labeled"
+        )
+
+    def test_does_not_check_out_pull_request_code(self) -> None:
+        """pull_request_target is only safe while no PR code is checked out."""
+        steps = self.data["jobs"]["label"]["steps"]
+        assert not any("actions/checkout" in str(step.get("uses", "")) for step in steps), (
+            "labeler.yml must not check out untrusted PR code under pull_request_target"
+        )

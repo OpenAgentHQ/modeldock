@@ -1,6 +1,6 @@
 """ModelDock port interfaces — typing.Protocol abstractions, no implementation."""
 
-from modeldock.ports.cache import CachePort
+from modeldock.ports.cache import CachePort, ContentStorePort
 from modeldock.ports.catalog_provider import CatalogProvider
 from modeldock.ports.downloader import DownloaderPort
 from modeldock.ports.events import EventPort
@@ -15,6 +15,7 @@ __all__ = [
     "CatalogProvider",
     "DownloaderPort",
     "CachePort",
+    "ContentStorePort",
     "ProgressPort",
     "EventPort",
 ]

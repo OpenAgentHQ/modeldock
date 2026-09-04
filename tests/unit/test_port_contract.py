@@ -7,13 +7,14 @@ Parameterized over the fake and real implementations.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Callable, List
 
 import pytest
 
 from modeldock.domain.model import Category, ModelRef, ModelSpec
-from modeldock.ports.cache import CachePort
+from modeldock.ports.cache import CachePort, ContentStorePort
 from modeldock.ports.runtime import PullResult, RuntimePort, RuntimeStatus
 
 # --- RuntimePort contract ---------------------------------------------------
@@ -110,3 +111,42 @@ def test_cache_status_and_clean(cache_factory: Callable[[], List[CachePort]]) ->
         # force=True wipes everything.
         impl.clean(force=True)
         assert impl.status() == []
+
+
+# --- ContentStorePort contract ----------------------------------------------
+
+
+def _content_store_implementations(root: Path) -> List[ContentStorePort]:
+    from modeldock.adapters.cache import FilesystemCache
+
+    return [FilesystemCache(root / "fs_store")]
+
+
+def test_content_store_stores_identical_content_once(tmp_path: Path) -> None:
+    """Any ContentStorePort must key weights by content, never by name."""
+    for impl in _content_store_implementations(tmp_path):
+        payload = b"identical weights"
+        first = tmp_path / "first.bin"
+        second = tmp_path / "second.bin"
+        first.write_bytes(payload)
+        second.write_bytes(payload)
+
+        blob_a, digest_a = impl.store_blob(first)
+        blob_b, digest_b = impl.store_blob(second)
+
+        assert digest_a == digest_b == hashlib.sha256(payload).hexdigest()
+        assert blob_a == blob_b
+        assert impl.blob_path(digest_a) == blob_a
+        assert impl.has_blob(digest_a)
+
+
+def test_content_store_links_without_duplicating(tmp_path: Path) -> None:
+    for impl in _content_store_implementations(tmp_path):
+        src = tmp_path / "weights.bin"
+        src.write_bytes(b"linkable weights")
+        blob, digest = impl.store_blob(src)
+        dest = tmp_path / "readable" / "model.gguf"
+
+        assert impl.link_into(blob, dest) == dest
+        assert dest.read_bytes() == blob.read_bytes()
+        assert impl.has_blob(digest), "linking must not move or consume the blob"

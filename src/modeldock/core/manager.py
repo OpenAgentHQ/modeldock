@@ -38,7 +38,7 @@ from modeldock.domain.model import (
     RuntimeStatus,
 )
 from modeldock.domain.source import SourceInfo, SourceTrust
-from modeldock.ports.cache import CachePort
+from modeldock.ports.cache import CachePort, ContentStorePort
 from modeldock.ports.events import EventPort
 from modeldock.ports.registry import RegistryPort
 from modeldock.ports.runtime import RuntimePort
@@ -348,18 +348,74 @@ class ModelManager:
                 raise
 
         if spec is not None and needs_http_download(spec):
-            dest = self._model_dest(spec, ref)
-            self._http_downloader.download(spec, dest, self._progress)
-            variant = spec.default_variant()
-            self._cache_port.record(
-                ref=ref,
-                tag=ref.tag,
-                sha256=variant.sha256 or "" if variant else "",
-                size_bytes=dest.stat().st_size,
-            )
+            self._install_via_http(spec, ref)
         else:
             self._download.pull(ref)
         return ref
+
+    def _install_via_http(self, spec: ModelSpec, ref: ModelRef) -> None:
+        """Fetch a raw artifact into the content-addressed cache.
+
+        Weights are keyed by SHA-256, so two refs resolving to byte-identical
+        files share one copy on disk instead of one copy each. When the catalog
+        publishes the digest and those bytes are already stored, the download is
+        skipped outright — the re-install is instant and works offline.
+        Caches that do not store blobs keep the previous download-to-path
+        behaviour.
+        """
+        dest = self._model_dest(spec, ref)
+        variant = spec.default_variant()
+        expected = (variant.sha256 or "").strip().lower() if variant else ""
+
+        store: Optional[ContentStorePort] = None
+        if isinstance(self._cache_port, ContentStorePort):
+            store = self._cache_port
+        if store is None:
+            self._http_downloader.download(spec, dest, self._progress)
+            self._cache_port.record(
+                ref=ref,
+                tag=ref.tag,
+                sha256=expected,
+                size_bytes=dest.stat().st_size,
+            )
+            return
+
+        # Each step runs under the cache lock so a concurrent `cache clean`
+        # cannot reclaim the weights between checking for them and recording
+        # them. The download itself stays outside the lock.
+        if expected:
+            with store.transaction():
+                if store.has_blob(expected):
+                    self._logger.info(
+                        "Reusing cached weights for %s (sha256 %s)",
+                        ref.qualified_name(),
+                        expected[:12],
+                    )
+                    blob = store.blob_path(expected)
+                    store.link_into(blob, dest)
+                    store.record_artifact(
+                        ref=ref,
+                        tag=ref.tag,
+                        sha256=expected,
+                        size_bytes=blob.stat().st_size,
+                        path=dest,
+                    )
+                    return
+
+        self._http_downloader.download(spec, dest, self._progress)
+        with store.transaction():
+            # store_blob consumes dest (it is moved into the blob store, or
+            # discarded when those bytes are already there); link_into then
+            # re-creates dest as a hard link onto the stored blob.
+            blob, digest = store.store_blob(dest, expected or None)
+            store.link_into(blob, dest)
+            store.record_artifact(
+                ref=ref,
+                tag=ref.tag,
+                sha256=digest,
+                size_bytes=blob.stat().st_size,
+                path=dest,
+            )
 
     def _model_dest(self, spec: ModelSpec, ref: ModelRef) -> Path:
         """Filesystem path for an HTTP-downloaded GGUF artifact."""

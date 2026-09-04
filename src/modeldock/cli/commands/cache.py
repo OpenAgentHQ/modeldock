@@ -32,7 +32,11 @@ def cache_clean(debug: bool = typer.Option(False, "--debug", help="Show tracebac
     try:
         mgr = ModelManager()
         removed = mgr.cache.clean()
-        typer.echo(f"Removed {len(removed)} orphaned entries.")
+        # clean() reports manifest entries as name:tag and reclaimed weights
+        # as blobs/<sha256>; count them separately so the number means something.
+        blobs = [item for item in removed if item.startswith("blobs/")]
+        entries = len(removed) - len(blobs)
+        typer.echo(f"Removed {entries} orphaned entries and {len(blobs)} unreferenced blobs.")
     except Exception as exc:  # noqa: BLE001 - top-level CLI boundary
         print_error(exc, debug)
         raise typer.Exit(code=1)  # noqa: B904

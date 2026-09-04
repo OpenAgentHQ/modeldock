@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Path-based PR area labels
+# ---------------------------------------------------------------------------
+# Consumed by actions/labeler@v5 (see .github/workflows/labeler.yml).
+# Each label lists the globs that, when touched by a PR, apply it. A PR that
+# spans several areas gets several labels; nothing is ever removed here
+# (sync-labels is off), so manually curated labels survive.
+#
+# Keep these globs in step with the tree in Architecture.md S2 --
+# tests/unit/test_labeler_config.py fails if a glob stops matching real paths.
+# ---------------------------------------------------------------------------
+
+"area: cli":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/modeldock/cli/**"
+
+"area: core":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/modeldock/core/**"
+          - "src/modeldock/domain/**"
+          - "src/modeldock/ports/**"
+          - "src/modeldock/common/**"
+
+"area: adapters":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/modeldock/adapters/**"
+
+"area: docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "example/**"
+          - "**/*.md"
+          - "mkdocs.yml"
+
+"area: tests":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+
+# pyproject.toml and uv.lock live here rather than under "area: core" because
+# this project's pyproject is mostly tooling config ([tool.ruff], [tool.mypy],
+# [tool.bandit], [tool.pytest.ini_options]). A dependency bump therefore lands
+# "area: ci"; since labeling is additive (sync-labels is off), a maintainer can
+# add "area: core" on top and it will not be stripped.
+"area: ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "pyproject.toml"
+          - "uv.lock"
+          - ".pre-commit-config.yaml"
