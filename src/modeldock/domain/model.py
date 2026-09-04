@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from modeldock.ports.registry import RegistryPort
@@ -75,14 +75,46 @@ class RuntimeBackend(str, Enum):
         raise ValueError(f"Unknown runtime backend: {value!r}")
 
 
+class ModelSize(BaseModel):
+    """Value object representing a model's size: parameter count and disk footprint.
+
+    Pure data — no I/O. Consolidates the loose ``params``/``size_bytes`` fields
+    previously carried directly on ``ModelVariant``. See issue #98.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    params: int  # raw parameter count, e.g. 8_000_000_000
+    size_bytes: int  # size on disk in bytes, e.g. 4_700_000_000
+
+    def format_params(self) -> str:
+        """Return a compact parameter count, e.g. '8B' or '1.5B'."""
+        if self.params >= 1_000_000_000:
+            value = self.params / 1_000_000_000
+            suffix = "B"
+        else:
+            value = self.params / 1_000_000
+            suffix = "M"
+        text = f"{value:.1f}".rstrip("0").rstrip(".")
+        return f"{text}{suffix}"
+
+    def format_size(self) -> str:
+        """Return a human-readable disk size, e.g. '4.7GB'."""
+        gb = self.size_bytes / (1000**3)
+        text = f"{gb:.1f}".rstrip("0").rstrip(".")
+        return f"{text}GB"
+
+    def __str__(self) -> str:
+        return f"{self.format_params()} ({self.format_size()})"
+
+
 class ModelVariant(BaseModel):
     """A specific tag/variant of a model (e.g. llama3:8b)."""
 
     tag: str
     download_url: Optional[str] = None
     sha256: Optional[str] = None
-    params: Optional[str] = None
-    size_bytes: Optional[int] = None
+    size: Optional[ModelSize] = None
     min_ram: Optional[str] = None
 
 
