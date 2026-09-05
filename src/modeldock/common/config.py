@@ -39,7 +39,7 @@ class Settings(BaseModel):
     default_backend: RuntimeBackend = RuntimeBackend.OLLAMA
     cache_dir: Path = Field(default_factory=default_cache_dir)
     registry_url: Optional[str] = None
-    catalog_source: str = "auto"  # "auto" | "ollama" | "bundled"
+    catalog_source: str = "auto"  # "auto" | "ollama" | "bundled" | "remote"
     log_level: str = "ERROR"
     progress_style: str = "rich"
     auto_install: bool = False
@@ -71,7 +71,7 @@ class Settings(BaseModel):
     @field_validator("catalog_source")
     @classmethod
     def _validate_catalog_source(cls, value: str) -> str:
-        allowed = {"auto", "ollama", "bundled"}
+        allowed = {"auto", "ollama", "bundled", "remote"}
         if value not in allowed:
             raise ConfigError(
                 f"Invalid catalog_source {value!r}; expected one of {sorted(allowed)}"

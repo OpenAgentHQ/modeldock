@@ -12,7 +12,7 @@ Architecture.md §9.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Set
 
 from modeldock.common.errors import ModelNotFoundError
 from modeldock.domain.model import Category, ModelRef, ModelSpec
@@ -78,21 +78,32 @@ class CompositeRegistry:
         Each source that can describe itself contributes its own
         ``SourceInfo``; a source that predates the ``describe`` contract still
         appears, as a minimal custom entry, so the enumeration is complete.
+
+        Descriptors are deduplicated by source name, keeping the first: a
+        member may itself merge a shared source underneath it (``RemoteRegistry``
+        overlays the bundled catalog), and listing that source once per member
+        would misrepresent one catalog as several.
         """
         infos: List[SourceInfo] = []
+        seen: Set[str] = set()
         for source in self._sources:
             describe = getattr(source, "describe", None)
             if callable(describe):
-                infos.extend(describe())
+                candidates = list(describe())
             else:
-                infos.append(
+                candidates = [
                     SourceInfo(
                         name=type(source).__name__,
                         trust=SourceTrust.CUSTOM,
                         live=True,
                         model_count=len(source.list_all()),
                     )
-                )
+                ]
+            for info in candidates:
+                if info.name in seen:
+                    continue
+                seen.add(info.name)
+                infos.append(info)
         return infos
 
     def refresh(self) -> int:
