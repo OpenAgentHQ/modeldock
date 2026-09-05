@@ -459,8 +459,18 @@ current model count. This is the observability/trust requirement made concrete.
     its own at all, returns an empty list in that case rather than the
     shared Ollama-tag catalog's invalid names.
   - `BundledRegistry` — reads `catalog.json` (offline fallback).
-  - `RemoteRegistry` — optional fetch/refresh from a URL/JSON for community
-    updates without a package release.
+  - `RemoteRegistry` (`adapters/registry/remote.py`) — optional fetch of a
+    `catalog.json`-shaped document from `registry_url`, for community updates
+    without a package release. Built on `CachedCatalogRegistry`, but
+    cache-*first*: the disk cache (`<cache_dir>/remote_catalog_cache.json`,
+    1-hour TTL) answers on its own inside the TTL so a configured URL costs no
+    round-trip per CLI invocation; `refresh()` bypasses it, and once a live
+    fetch fails an expired cache is still preferred over none. The remote
+    entries are merged *over* the bundled catalog rather than replacing it —
+    a remote entry wins a name collision, but no bundled model is ever
+    dropped, so a remote URL can only add to discovery. Non-`http(s)` URLs are
+    rejected up front, the response body is size-capped, and a single
+    malformed entry is skipped rather than discarding the whole payload.
   - `CompositeRegistry` (`adapters/registry/composite.py`) — merges an
     ordered list of `RegistryPort` sources into one: `search`/`list_all`/
     `by_category`/`recommend` union every source's results (earlier source
@@ -471,6 +481,11 @@ current model count. This is the observability/trust requirement made concrete.
 - **Configuration:** `catalog_source` setting in `Settings` controls which
   registry is used: `"ollama"` (dynamic only) and `"bundled"` (static only)
   are explicit single-source opt-outs with no network beyond that one source.
+  `"remote"` selects `RemoteRegistry` alone (still merged over bundled, inside
+  the registry itself) and requires `registry_url`. Setting `registry_url`
+  under `"auto"` instead merges the remote catalog in ahead of every other
+  source, so entries published since the last release outrank the shipped
+  ones; an unusable URL degrades to a warning rather than breaking discovery.
   `"auto"` (default) tries dynamic Ollama, falls back to bundled, **and**
   merges in the active backend's own live catalog when it has one —
   `ModelManager._resolve_backend_catalog` resolves it through

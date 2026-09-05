@@ -17,6 +17,7 @@ from modeldock.adapters.progress import make_progress
 from modeldock.adapters.runtimes.registry import RuntimeRegistry
 from modeldock.common.config import Settings
 from modeldock.common.errors import (
+    ConfigError,
     DownloadError,
     ModelNotFoundError,
     RuntimeUnavailableError,
@@ -102,6 +103,11 @@ class ModelManager:
         active backend cannot actually install. ``"bundled"``/``"ollama"``
         stay single-source and network-free/live-only respectively, exactly
         as before — they are explicit opt-outs of this merge.
+
+        A configured ``registry_url`` adds one more layer: the remote catalog
+        is merged in ahead of everything else, so entries published since the
+        last release outrank the shipped ones. ``"remote"`` selects it as the
+        sole source (still merged over bundled, inside ``RemoteRegistry``).
         """
         source = cfg.catalog_source
         if source == "bundled":
@@ -112,14 +118,22 @@ class ModelManager:
             from modeldock.adapters.registry.ollama_library import OllamaLibraryRegistry
 
             return OllamaLibraryRegistry(cache_dir=cfg.cache_dir)
-        else:  # "auto" — try ollama, fallback to bundled; merge in a backend catalog
+        elif source == "remote":
+            return self._resolve_remote_registry(cfg)
+        else:  # "auto" — try ollama, fallback to bundled; merge in extra catalogs
             base = self._resolve_auto_registry(cfg)
+            overlays: List[RegistryPort] = []
+            remote = self._resolve_optional_remote(cfg)
+            if remote is not None:
+                overlays.append(remote)
             backend_catalog = self._resolve_backend_catalog(cfg)
-            if backend_catalog is None:
+            if backend_catalog is not None:
+                overlays.append(backend_catalog)
+            if not overlays:
                 return base
             from modeldock.adapters.registry.composite import CompositeRegistry
 
-            return CompositeRegistry([backend_catalog, base])
+            return CompositeRegistry([*overlays, base])
 
     def _resolve_auto_registry(self, cfg: Settings) -> RegistryPort:
         """The general catalog for ``"auto"``: live Ollama, falling back to bundled."""
@@ -139,6 +153,39 @@ class ModelManager:
             self._logger.info("Live catalog empty; falling back to the bundled catalog")
             return BundledRegistry()
         return live
+
+    def _resolve_remote_registry(self, cfg: Settings) -> RegistryPort:
+        """The remote catalog for ``catalog_source="remote"``, bundled merged in.
+
+        Unlike the optional overlay under ``"auto"``, asking for ``"remote"``
+        explicitly without a ``registry_url`` is a configuration mistake rather
+        than something to silently degrade past, so it raises.
+        """
+        from modeldock.adapters.registry.remote import RemoteRegistry
+
+        if not cfg.registry_url:
+            raise ConfigError(
+                'catalog_source is "remote" but no registry_url is set; '
+                "set registry_url in your config file or MODELDOCK_REGISTRY_URL"
+            )
+        return RemoteRegistry(cfg.registry_url, cache_dir=cfg.cache_dir)
+
+    def _resolve_optional_remote(self, cfg: Settings) -> Optional[RegistryPort]:
+        """The remote catalog overlay for ``"auto"``, when a URL is configured.
+
+        Absent or unusable configuration degrades to ``None`` rather than
+        raising, so a stale or malformed ``registry_url`` can never break
+        ordinary discovery — exactly like the live catalog's own fallback.
+        """
+        if not cfg.registry_url:
+            return None
+        from modeldock.adapters.registry.remote import RemoteRegistry
+
+        try:
+            return RemoteRegistry(cfg.registry_url, cache_dir=cfg.cache_dir)
+        except Exception as exc:
+            self._logger.warning("Remote catalog unusable (%s); continuing without it", exc)
+            return None
 
     def _resolve_backend_catalog(self, cfg: Settings) -> Optional[RegistryPort]:
         """The active backend's own live catalog, or None when it has none.

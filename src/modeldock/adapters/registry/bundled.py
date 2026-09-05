@@ -41,6 +41,30 @@ def _load_catalog() -> List[Dict[str, Any]]:
     return cast(List[Dict[str, Any]], data.get("models", []))
 
 
+def load_bundled_catalog() -> List[Dict[str, Any]]:
+    """Return the raw entries of the bundled catalog.json.
+
+    Public counterpart to ``_load_catalog`` so other registries can read the
+    shipped catalog without importing a private name.
+    """
+    return _load_catalog()
+
+
+def catalog_entry_to_spec(raw: Dict[str, Any]) -> ModelSpec:
+    """Coerce one raw catalog.json entry into a validated ``ModelSpec``.
+
+    Shared by every registry that consumes catalog.json-shaped entries — the
+    bundled catalog and any remote catalog served in the same format — so the
+    enum coercion rules live in exactly one place instead of being reached for
+    across class boundaries.
+    """
+    raw = dict(raw)
+    raw["category"] = Category.from_value(raw["category"])
+    raw["capabilities"] = [Capability.from_value(c) for c in raw.get("capabilities", [])]
+    raw["backend_hints"] = [RuntimeBackend.from_value(b) for b in raw.get("backend_hints", [])]
+    return ModelSpec.model_validate(raw)
+
+
 class BundledRegistry:
     """Registry backed by the bundled catalog.json."""
 
@@ -62,11 +86,7 @@ class BundledRegistry:
 
     @staticmethod
     def _to_spec(raw: Dict[str, Any]) -> ModelSpec:
-        raw = dict(raw)
-        raw["category"] = Category.from_value(raw["category"])
-        raw["capabilities"] = [Capability.from_value(c) for c in raw.get("capabilities", [])]
-        raw["backend_hints"] = [RuntimeBackend.from_value(b) for b in raw.get("backend_hints", [])]
-        return ModelSpec.model_validate(raw)
+        return catalog_entry_to_spec(raw)
 
     # --- RegistryPort -----------------------------------------------------
 
@@ -125,4 +145,4 @@ class BundledRegistry:
         return list(self._specs.values())
 
 
-__all__ = ["BundledRegistry"]
+__all__ = ["BundledRegistry", "catalog_entry_to_spec", "load_bundled_catalog"]
