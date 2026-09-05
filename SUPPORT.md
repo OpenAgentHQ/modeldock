@@ -12,10 +12,6 @@ Thank you for using ModelDock! This document explains how to get help.
 - **Development**: [Development.md](Development.md) — Build, test, CI
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md) — Version history
 
-### Community
-
-- **GitHub Discussions**: [Discussions](https://github.com/OpenAgentHQ/modeldock/discussions) — Ask questions, share ideas
-
 ### Direct Support
 
 - **Issues**: [GitHub Issues](https://github.com/OpenAgentHQ/modeldock/issues) — Bug reports and feature requests
