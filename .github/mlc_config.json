@@ -1,0 +1,22 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^http://localhost" },
+    { "pattern": "^https://localhost" },
+    { "pattern": "^http://127\\.0\\.0\\.1" },
+    { "pattern": "^[a-z][a-z0-9/-]*/$", "comment": "MkDocs clean URLs (e.g. getting-started/quickstart/) only resolve after the site is built; valid as authored, not checkable as raw file paths." }
+  ],
+  "httpHeaders": [
+    {
+      "urls": ["https://github.com", "https://www.github.com"],
+      "headers": {
+        "Accept-Encoding": "gzip, deflate, br",
+        "User-Agent": "Mozilla/5.0 (compatible; MarkdownLinkCheck/1.0; +https://github.com/OpenAgentHQ/modeldock)"
+      }
+    }
+  ],
+  "aliveStatusCodes": [200, 206, 429],
+  "retryOn429": true,
+  "retryCount": 3,
+  "fallbackRetryDelay": "15s",
+  "timeout": "20s"
+}
