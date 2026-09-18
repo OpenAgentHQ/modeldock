@@ -95,6 +95,9 @@ class FakeCache(CachePort):
     def status(self) -> List[dict]:
         return list(self.entries.values())
 
+    def path(self) -> str:
+        return "/fake/cache"
+
     def get_model_config(self, ref: ModelRef) -> Optional[dict]:
         entry = self.entries.get(self._key(ref))
         return entry.get("user_config") if entry else None

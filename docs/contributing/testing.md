@@ -29,13 +29,21 @@ Use fake `RuntimePort`/`RegistryPort`/`CachePort` fixtures (`tests/conftest.py`)
 
 ## Port-Contract Tests
 
-A shared test suite parameterized over every `RuntimePort`/`DownloaderPort` implementation. Guarantees each adapter honors the interface.
+A shared test suite (`tests/unit/test_port_contract.py`) parameterized over every `RuntimePort`, `CachePort`, and `DownloaderPort` implementation. Guarantees each adapter honors its interface.
 
 ```bash
 pytest tests/unit -k contract
 ```
 
-New runtimes MUST pass this suite.
+The suite is split by adapter capability rather than one flat parametrization:
+
+- **Universal** — properties every `RuntimePort` must satisfy regardless of what it supports (backend identity, `status()`, `default_tag_for()`, category/capability lookups). Runs against all seven adapters, including the planned ones.
+- **Lifecycle** — adapters that actually pull/install/list/remove models in-process (`FakeRuntime`, `OllamaRuntime`, `LMStudioRuntime`), exercised with fake/mocked clients so no real daemon is required.
+- **Server-bound** — `LlamaCppRuntime`, which binds exactly one GGUF model per server process and must fail informatively (not silently) on `pull`/`remove`.
+- **Planned/offline** — `JanRuntime`, `Gpt4AllRuntime`, `VllmRuntime`, which aren't shipped yet and must consistently raise `RuntimeUnavailableError`.
+- **Registry coverage** — `test_registry_backend_coverage` asserts every backend in `RuntimeRegistry` has a corresponding adapter under contract test, so a new adapter that's registered but never added to the suite fails loudly instead of shipping untested.
+
+New runtimes MUST pass this suite, and MUST be added to `_all_runtime_implementations()` in `test_port_contract.py` so registry coverage stays enforced.
 
 ---
 
