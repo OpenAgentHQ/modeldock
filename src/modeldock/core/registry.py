@@ -3,12 +3,18 @@
 Implements search/info/categories/recommend by composing the registry adapter.
 See Architecture.md §9.
 """
-
 from __future__ import annotations
 
 from typing import List
 
-from modeldock.domain.model import Category, ModelInfo, ModelRef, ModelSpec
+from modeldock.domain.model import (
+    Category,
+    ModelAlias,
+    ModelInfo,
+    ModelRef,
+    ModelSpec,
+    ScoredModelSpec,
+)
 from modeldock.ports.registry import RegistryPort
 
 
@@ -18,9 +24,26 @@ class RegistryService:
     def __init__(self, registry: RegistryPort) -> None:
         self._registry = registry
 
-    def search(self, query: str) -> List[ModelSpec]:
-        """Search the catalog by name/alias/capability/category."""
-        return self._registry.search(query)
+    def search(self, query: str) -> List[ScoredModelSpec]:
+        """Search the catalog by name/alias/capability/category/description.
+
+        Ranks results by relevance rather than delegating to the adapter's
+        own ``search`` — name matches outrank capability matches, which
+        outrank description-only matches (see issue #79 / ``ModelAlias.
+        match_score``) — and returns each match paired with its score,
+        highest first. Ties are broken alphabetically by model name for
+        stable, predictable output. Returns ``[]`` for a blank query.
+        """
+        if not query or not query.strip():
+            return []
+
+        results = [
+            ScoredModelSpec(spec=spec, score=ModelAlias.match_score(spec, query))
+            for spec in self._registry.list_all()
+        ]
+        relevant = [result for result in results if result.score > 0]
+        relevant.sort(key=lambda result: (-result.score, result.spec.name))
+        return relevant
 
     def info(self, name: str, installed_tags: List[str] | None = None) -> ModelInfo:
         """Return metadata for a model, enriched with installed tags.

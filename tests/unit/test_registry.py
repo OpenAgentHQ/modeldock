@@ -1,18 +1,138 @@
 """Unit tests for RegistryService and BundledRegistry."""
-
 from __future__ import annotations
+
+from typing import List
 
 import pytest
 
 from modeldock.adapters.registry import BundledRegistry
 from modeldock.common.errors import ModelNotFoundError
 from modeldock.core.registry import RegistryService
-from modeldock.domain.model import Category, ModelRef
+from modeldock.domain.model import Capability, Category, ModelRef, ModelSpec
+
+
+class _StaticRegistry:
+    """A minimal RegistryPort stand-in with a fixed, known catalog.
+
+    Used for ranking-specific tests so assertions don't depend on whatever
+    the shared ``fake_registry`` fixture happens to contain.
+    """
+
+    def __init__(self, specs: List[ModelSpec]) -> None:
+        self._specs = specs
+
+    def list_all(self) -> List[ModelSpec]:
+        return list(self._specs)
+
+    def get(self, ref: ModelRef) -> ModelSpec:
+        for spec in self._specs:
+            if spec.name == ref.name:
+                return spec
+        raise ModelNotFoundError(f"Unknown model: {ref.name}")
+
+    def search(self, query: str) -> List[ModelSpec]:
+        # Intentionally naive/unranked — RegistryService.search must rank via
+        # list_all() + domain scoring, not depend on this method at all.
+        q = query.lower()
+        return [s for s in self._specs if q in s.name.lower()]
+
+    def recommend(self, task: str) -> List[ModelSpec]:
+        return []
+
+    def by_category(self, category: Category) -> List[ModelSpec]:
+        return [s for s in self._specs if s.category == category]
+
+
+@pytest.fixture()
+def ranking_registry() -> _StaticRegistry:
+    return _StaticRegistry(
+        [
+            ModelSpec(
+                name="llama3",
+                aliases=["llama"],
+                category=Category.CHAT,
+                capabilities=[Capability.CHAT],
+                description="Meta's Llama 3 chat model.",
+            ),
+            ModelSpec(
+                name="qwen3",
+                aliases=[],
+                category=Category.CODING,
+                capabilities=[Capability.CHAT, Capability.TOOL_USE],
+                description="A coding-focused model, plays well with llama-style prompts.",
+            ),
+            ModelSpec(
+                name="minilm",
+                aliases=[],
+                category=Category.EMBEDDING,
+                capabilities=[Capability.EMBED],
+                description="Small embedding model, unrelated to chat models.",
+            ),
+        ]
+    )
 
 
 def test_registry_service_search_delegates(fake_registry: object) -> None:
     svc = RegistryService(fake_registry)
     assert svc.search("llama")
+
+
+def test_registry_service_search_returns_scored_results(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    results = svc.search("llama")
+    assert results
+    for result in results:
+        assert hasattr(result, "spec")
+        assert hasattr(result, "score")
+        assert result.score > 0
+
+
+def test_registry_service_search_ranks_exact_name_match_first(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    results = svc.search("llama3")
+    assert results[0].spec.name == "llama3"
+    # An exact name match should score strictly higher than a mention
+    # buried in another model's description.
+    assert results[0].score > results[-1].score
+
+
+def test_registry_service_search_ranks_capability_over_description(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    results = svc.search("chat")
+    order = [r.spec.name for r in results]
+    # "llama3"/"qwen3" declare the "chat" capability directly; "minilm"
+    # only mentions "chat models" in its description. Capability should
+    # outrank a description-only mention.
+    assert order.index("llama3") < order.index("minilm")
+    assert order.index("qwen3") < order.index("minilm")
+
+
+def test_registry_service_search_is_case_insensitive(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    assert svc.search("LLAMA3")[0].spec.name == "llama3"
+
+
+def test_registry_service_search_empty_query_returns_empty(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    assert svc.search("") == []
+    assert svc.search("   ") == []
+
+
+def test_registry_service_search_no_match_returns_empty(
+    ranking_registry: _StaticRegistry,
+) -> None:
+    svc = RegistryService(ranking_registry)
+    assert svc.search("totally-unrelated-xyz") == []
 
 
 def test_registry_service_info_resolves(fake_registry: object) -> None:
