@@ -14,7 +14,7 @@
   <a href="https://codecov.io/gh/OpenAgentHQ/modeldock"><img src="https://codecov.io/gh/OpenAgentHQ/modeldock/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://github.com/OpenAgentHQ/modeldock/pulls"><img src="https://img.shields.io/github/issues-pr/OpenAgentHQ/modeldock" alt="PRs"></a>
   <a href="https://github.com/OpenAgentHQ/modeldock/network/members"><img src="https://img.shields.io/github/forks/OpenAgentHQ/modeldock" alt="Forks"></a>
-  <a href="https://github.com/OpenAgentHQ/modeldock/stargazers"><img src="https://img.shields.io/github/stars/OpenAgentHQ/modeldock" alt="Stars"></a>
+  <a href="https://github.com/OpenAgentHQ/modeldock"><img src="https://img.shields.io/github/stars/OpenAgentHQ/modeldock" alt="Stars"></a>
   <a href="https://github.com/OpenAgentHQ/modeldock/graphs/contributors"><img src="https://img.shields.io/github/contributors/OpenAgentHQ/modeldock" alt="Contributors"></a>
   <a href="https://github.com/OpenAgentHQ/modeldock/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python"></a>
