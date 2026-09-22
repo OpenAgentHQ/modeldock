@@ -67,9 +67,19 @@ def list() -> List[Any]:
     return _manager().list()
 
 
-def search(query: str) -> List[Any]:
-    """Search by name / capability / category."""
-    return _manager().search(query)
+def search(
+    query: str = "",
+    category: Optional[str] = None,
+    capability: Optional[str] = None,
+    min_ram: Optional[int] = None,
+) -> List[Any]:
+    """Search by name / capability / category / RAM."""
+    return _manager().search(
+        query=query, 
+        category=category, 
+        capability=capability, 
+        min_ram=min_ram
+    )
 
 
 def installed() -> List[ModelRef]:

@@ -18,9 +18,40 @@ class RegistryService:
     def __init__(self, registry: RegistryPort) -> None:
         self._registry = registry
 
-    def search(self, query: str) -> List[ModelSpec]:
+    def search(
+        self, 
+        query: str = "", 
+        category: str | None = None, 
+        capability: str | None = None, 
+        min_ram: int | None = None
+    ) -> List[ModelSpec]:
         """Search the catalog by name/alias/capability/category."""
-        return self._registry.search(query)
+        # 1. Base search: use query if provided, otherwise grab all to filter
+        if query:
+            results = self._registry.search(query)
+        else:
+            results = self._registry.list_all()
+
+        # 2. Apply filters safely 
+        if category is not None:
+            results = [
+                m for m in results 
+                if m.category == category or (hasattr(m.category, 'value') and m.category.value == category)
+            ]
+            
+        if capability is not None:
+            results = [
+                m for m in results 
+                if capability in getattr(m, 'capabilities', [])
+            ]
+            
+        if min_ram is not None:
+            results = [
+                m for m in results 
+                if getattr(m, 'ram', 0) >= min_ram
+            ]
+
+        return results
 
     def info(self, name: str, installed_tags: List[str] | None = None) -> ModelInfo:
         """Return metadata for a model, enriched with installed tags.
