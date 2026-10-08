@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from modeldock.domain.alias import normalize_alias
 from modeldock.domain.errors import AliasResolutionError
 from modeldock.domain.model import (
     Capability,
@@ -87,6 +88,18 @@ def test_model_spec_default_variant() -> None:
 def test_model_spec_no_default_variant() -> None:
     spec = ModelSpec(name="x", category=Category.CHAT, default_tag="missing")
     assert spec.default_variant() is None
+
+
+def test_alias_normalization_lowercases() -> None:
+    assert normalize_alias("Llama3") == "llama3"
+
+
+def test_alias_normalization_strips_separators() -> None:
+    assert normalize_alias("Llama-3_8B") == "llama38b"
+
+
+def test_alias_normalization_strips_whitespace() -> None:
+    assert normalize_alias(" Llama 3 ") == "llama3"
 
 
 def test_alias_matches_query() -> None:
