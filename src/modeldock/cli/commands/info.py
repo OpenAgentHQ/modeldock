@@ -25,9 +25,9 @@ def _echo_spec(spec: Any) -> None:
     if spec.variants:
         typer.echo("Variants:")
         for v in spec.variants:
-            size = f"{v.size_bytes} bytes" if v.size_bytes else "?"
+            size = str(v.size) if v.size else "?"
             ram = v.min_ram or "?"
-            typer.echo(f"  - {v.tag} ({v.params or '?'}), {size}, min RAM {ram}")
+            typer.echo(f"  - {v.tag} ({size}), min RAM {ram}")
 
 
 def info_cmd(

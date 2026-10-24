@@ -30,6 +30,7 @@ from modeldock.domain.model import (
     Device,
     ModelInfo,
     ModelRef,
+    ModelSize,
     ModelSpec,
     ModelVariant,
     RuntimeBackend,
@@ -45,7 +46,9 @@ _SPEC = ModelSpec(
     category=Category.CHAT,
     capabilities=[Capability.CHAT, Capability.TOOL_USE],
     default_tag="8b",
-    variants=[ModelVariant(tag="8b", params="8B", size_bytes=4_700_000_000)],
+    variants=[
+        ModelVariant(tag="8b", size=ModelSize(params=8_000_000_000, size_bytes=4_700_000_000)),
+    ],
     description="Meta Llama 3",
     source=OLLAMA_OFFICIAL,
 )
