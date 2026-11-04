@@ -1,4 +1,4 @@
-""""Focused coverage for shared HTTP, platform, and console helpers."""
+"""Focused coverage for shared HTTP, platform, and console helpers."""
 
 from __future__ import annotations
 
@@ -185,7 +185,7 @@ def test_print_warning_writes_only_to_stderr(capsys) -> None:
     print_warning("review the selected backend")
 
     captured = capsys.readouterr()
-    assert captured.err == "Warning: review the selected backend\\n"
+    assert captured.err == "Warning: review the selected backend\n"
     assert captured.out == ""
 
 
