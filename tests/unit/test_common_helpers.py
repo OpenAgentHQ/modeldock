@@ -1,4 +1,4 @@
-"""Focused coverage for shared HTTP, platform, and console helpers."""
+""""Focused coverage for shared HTTP, platform, and console helpers."""
 
 from __future__ import annotations
 
@@ -100,41 +100,40 @@ def test_create_async_client_merges_headers_and_options(monkeypatch) -> None:
     )
 
 
-def test_platform_directory_helpers_use_modeldock_scope(monkeypatch) -> None:
-    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
-
-    def record(name: str, result: str):
-        def lookup(*args: object, **kwargs: object) -> str:
-            calls.append((name, args, kwargs))
-            return result
-
-        return lookup
-
-    monkeypatch.setattr(
-        "modeldock.common.platform.platformdirs.user_config_dir", record("config", "/cfg")
-    )
-    monkeypatch.setattr(
-        "modeldock.common.platform.platformdirs.user_cache_dir", record("cache", "/cache")
-    )
-    monkeypatch.setattr(
-        "modeldock.common.platform.platformdirs.user_data_dir", record("data", "/data")
-    )
-    monkeypatch.setattr(
-        "modeldock.common.platform.platformdirs.site_config_dir",
-        record("system", "/etc/modeldock"),
-    )
-
+def test_app_name_uses_modeldock_scope() -> None:
     assert app_name() == "modeldock"
+
+
+def test_user_config_dir_uses_modeldock_scope(monkeypatch) -> None:
+    lookup = Mock(return_value="/cfg")
+    monkeypatch.setattr("modeldock.common.platform.platformdirs.user_config_dir", lookup)
+
     assert user_config_dir() == Path("/cfg")
+    lookup.assert_called_once_with("modeldock", roaming=True)
+
+
+def test_user_cache_dir_uses_modeldock_scope(monkeypatch) -> None:
+    lookup = Mock(return_value="/cache")
+    monkeypatch.setattr("modeldock.common.platform.platformdirs.user_cache_dir", lookup)
+
     assert user_cache_dir() == Path("/cache")
+    lookup.assert_called_once_with("modeldock")
+
+
+def test_user_data_dir_uses_modeldock_scope(monkeypatch) -> None:
+    lookup = Mock(return_value="/data")
+    monkeypatch.setattr("modeldock.common.platform.platformdirs.user_data_dir", lookup)
+
     assert user_data_dir() == Path("/data")
+    lookup.assert_called_once_with("modeldock")
+
+
+def test_system_config_dir_uses_modeldock_scope(monkeypatch) -> None:
+    lookup = Mock(return_value="/etc/modeldock")
+    monkeypatch.setattr("modeldock.common.platform.platformdirs.site_config_dir", lookup)
+
     assert system_config_dir() == Path("/etc/modeldock")
-    assert calls == [
-        ("config", ("modeldock",), {"roaming": True}),
-        ("cache", ("modeldock",), {}),
-        ("data", ("modeldock",), {}),
-        ("system", ("modeldock",), {}),
-    ]
+    lookup.assert_called_once_with("modeldock")
 
 
 def test_default_cache_dir_uses_environment_override(monkeypatch, tmp_path: Path) -> None:
@@ -186,7 +185,7 @@ def test_print_warning_writes_only_to_stderr(capsys) -> None:
     print_warning("review the selected backend")
 
     captured = capsys.readouterr()
-    assert captured.err == "Warning: review the selected backend\n"
+    assert captured.err == "Warning: review the selected backend\\n"
     assert captured.out == ""
 
 
