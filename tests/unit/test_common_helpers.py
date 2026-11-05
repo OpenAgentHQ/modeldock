@@ -7,6 +7,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 from modeldock.cli.console import (
     print_error,
     print_warning,
@@ -42,7 +47,7 @@ from modeldock.domain.model import (
 from modeldock.domain.source import SourceInfo, SourceTrust
 
 
-def test_create_client_applies_defaults_and_user_agent(monkeypatch) -> None:
+def test_create_client_applies_defaults_and_user_agent(monkeypatch: pytest.MonkeyPatch) -> None:
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.Client", factory)
 
@@ -57,7 +62,7 @@ def test_create_client_applies_defaults_and_user_agent(monkeypatch) -> None:
     )
 
 
-def test_create_client_merges_custom_headers_and_options(monkeypatch) -> None:
+def test_create_client_merges_custom_headers_and_options(monkeypatch: pytest.MonkeyPatch) -> None:
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.Client", factory)
 
@@ -71,7 +76,7 @@ def test_create_client_merges_custom_headers_and_options(monkeypatch) -> None:
     )
 
 
-def test_create_async_client_applies_defaults(monkeypatch) -> None:
+def test_create_async_client_applies_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.AsyncClient", factory)
 
@@ -86,7 +91,7 @@ def test_create_async_client_applies_defaults(monkeypatch) -> None:
     )
 
 
-def test_create_async_client_merges_headers_and_options(monkeypatch) -> None:
+def test_create_async_client_merges_headers_and_options(monkeypatch: pytest.MonkeyPatch) -> None:
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.AsyncClient", factory)
 
@@ -104,7 +109,7 @@ def test_app_name_uses_modeldock_scope() -> None:
     assert app_name() == "modeldock"
 
 
-def test_user_config_dir_uses_modeldock_scope(monkeypatch) -> None:
+def test_user_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     lookup = Mock(return_value="/cfg")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_config_dir", lookup)
 
@@ -112,7 +117,7 @@ def test_user_config_dir_uses_modeldock_scope(monkeypatch) -> None:
     lookup.assert_called_once_with("modeldock", roaming=True)
 
 
-def test_user_cache_dir_uses_modeldock_scope(monkeypatch) -> None:
+def test_user_cache_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     lookup = Mock(return_value="/cache")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_cache_dir", lookup)
 
@@ -120,7 +125,7 @@ def test_user_cache_dir_uses_modeldock_scope(monkeypatch) -> None:
     lookup.assert_called_once_with("modeldock")
 
 
-def test_user_data_dir_uses_modeldock_scope(monkeypatch) -> None:
+def test_user_data_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     lookup = Mock(return_value="/data")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_data_dir", lookup)
 
@@ -128,7 +133,7 @@ def test_user_data_dir_uses_modeldock_scope(monkeypatch) -> None:
     lookup.assert_called_once_with("modeldock")
 
 
-def test_system_config_dir_uses_modeldock_scope(monkeypatch) -> None:
+def test_system_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
     lookup = Mock(return_value="/etc/modeldock")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.site_config_dir", lookup)
 
@@ -136,21 +141,21 @@ def test_system_config_dir_uses_modeldock_scope(monkeypatch) -> None:
     lookup.assert_called_once_with("modeldock")
 
 
-def test_default_cache_dir_uses_environment_override(monkeypatch, tmp_path: Path) -> None:
+def test_default_cache_dir_uses_environment_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     override = tmp_path / "custom-cache"
     monkeypatch.setenv("MODELDOCK_CACHE_DIR", str(override))
 
     assert default_cache_dir() == override
 
 
-def test_default_cache_dir_uses_models_subdirectory(monkeypatch) -> None:
+def test_default_cache_dir_uses_models_subdirectory(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MODELDOCK_CACHE_DIR", raising=False)
     monkeypatch.setattr("modeldock.common.platform.user_cache_dir", lambda: Path("/cache"))
 
     assert default_cache_dir() == Path("/cache/models")
 
 
-def test_is_windows_checks_platform_name(monkeypatch) -> None:
+def test_is_windows_checks_platform_name(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("modeldock.common.platform.os", SimpleNamespace(name="nt"))
     assert is_windows() is True
 
@@ -158,7 +163,7 @@ def test_is_windows_checks_platform_name(monkeypatch) -> None:
     assert is_windows() is False
 
 
-def test_print_error_formats_modeldock_error_as_plain_text(capsys) -> None:
+def test_print_error_formats_modeldock_error_as_plain_text(capsys: pytest.CaptureFixture[str]) -> None:
     print_error(ModelNotFoundError("missing-model"))
 
     captured = capsys.readouterr()
@@ -166,7 +171,7 @@ def test_print_error_formats_modeldock_error_as_plain_text(capsys) -> None:
     assert captured.out == ""
 
 
-def test_print_error_emits_json_for_unknown_exception(capsys) -> None:
+def test_print_error_emits_json_for_unknown_exception(capsys: pytest.CaptureFixture[str]) -> None:
     print_error(ValueError("bad value"), as_json=True)
 
     captured = capsys.readouterr()
@@ -175,13 +180,17 @@ def test_print_error_emits_json_for_unknown_exception(capsys) -> None:
     assert captured.out == ""
 
 
-def test_print_error_includes_traceback_in_debug_mode(capsys) -> None:
-    print_error(ValueError("debug failure"), debug=True)
+def test_print_error_includes_traceback_in_debug_mode(capsys: pytest.CaptureFixture[str]) -> None:
+    """Include the active exception traceback when debug output is enabled."""
+    try:
+        raise ValueError("debug failure")
+    except ValueError as error:
+        print_error(error, debug=True)
 
     assert "Traceback (most recent call last)" in capsys.readouterr().err
 
 
-def test_print_warning_writes_only_to_stderr(capsys) -> None:
+def test_print_warning_writes_only_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
     print_warning("review the selected backend")
 
     captured = capsys.readouterr()
@@ -189,7 +198,7 @@ def test_print_warning_writes_only_to_stderr(capsys) -> None:
     assert captured.out == ""
 
 
-def test_render_json_writes_indented_json(capsys) -> None:
+def test_render_json_writes_indented_json(capsys: pytest.CaptureFixture[str]) -> None:
     spec = ModelSpec(
         name="llama3",
         category=Category.CHAT,
@@ -206,7 +215,7 @@ def test_render_json_writes_indented_json(capsys) -> None:
     assert payload["models"][1]["installed"] is True
 
 
-def test_render_models_displays_catalog_fields(capsys) -> None:
+def test_render_models_displays_catalog_fields(capsys: pytest.CaptureFixture[str]) -> None:
     spec = ModelSpec(
         name="llama3",
         category=Category.CHAT,
@@ -224,7 +233,7 @@ def test_render_models_displays_catalog_fields(capsys) -> None:
     assert "ollama" in output
 
 
-def test_render_installed_displays_backend(capsys) -> None:
+def test_render_installed_displays_backend(capsys: pytest.CaptureFixture[str]) -> None:
     render_installed([ModelRef(name="llama3", tag="8b", backend=RuntimeBackend.OLLAMA)])
 
     output = capsys.readouterr().out
@@ -233,7 +242,7 @@ def test_render_installed_displays_backend(capsys) -> None:
     assert "ollama" in output
 
 
-def test_render_runtimes_displays_status_and_details(capsys) -> None:
+def test_render_runtimes_displays_status_and_details(capsys: pytest.CaptureFixture[str]) -> None:
     statuses = [
         RuntimeStatus(
             backend=RuntimeBackend.OLLAMA,
@@ -253,7 +262,7 @@ def test_render_runtimes_displays_status_and_details(capsys) -> None:
     assert "LM Studio" in output or "lmstudio" in output
 
 
-def test_render_sources_displays_trust_and_availability(capsys) -> None:
+def test_render_sources_displays_trust_and_availability(capsys: pytest.CaptureFixture[str]) -> None:
     sources = [
         SourceInfo(
             name="local-catalog",
@@ -281,7 +290,7 @@ def test_render_sources_displays_trust_and_availability(capsys) -> None:
     assert "custom" in output
 
 
-def test_render_verify_displays_success_and_failure(capsys) -> None:
+def test_render_verify_displays_success_and_failure(capsys: pytest.CaptureFixture[str]) -> None:
     render_verify([("llama3", True), ("qwen3", False)])
 
     output = capsys.readouterr().out
