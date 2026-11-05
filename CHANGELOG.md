@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- CI secret scanning (`.github/workflows/check.yml`) — a `secret-scan` job
+  runs gitleaks and TruffleHog over the full git history on every push, pull
+  request, and the weekly schedule, so committed secrets are caught in CI
+  before they land. Both scanners are pinned to released versions (gitleaks
+  verifies its release checksum); the gitleaks CLI is used directly instead of
+  `gitleaks-action` because the action requires a `GITLEAKS_LICENSE` secret
+  for organization repositories.
+
 - `execution_policy` setting (`unrestricted` | `warn` | `strict`, default
   `warn`) — the restricted-execution context for issue #139. Configurable via
   `config.toml`, `MODELDOCK_EXECUTION_POLICY`, and `modeldock config show`.
