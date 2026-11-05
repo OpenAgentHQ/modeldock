@@ -143,9 +143,14 @@ for 24 hours. Set `catalog_source` in config or `MODELDOCK_CATALOG_SOURCE` env v
 
 | Value | Behavior |
 |-------|----------|
-| `auto` | Try dynamic, fallback to bundled (default) |
+| `auto` | Try dynamic, fallback to bundled; merges `registry_url` when set (default) |
 | `ollama` | Dynamic only — requires internet |
 | `bundled` | Static catalog.json only — fully offline |
+| `remote` | `registry_url` only, merged over bundled — requires `registry_url` |
+
+Set `registry_url` to a `catalog.json`-shaped URL to pick up models published
+since the last release. Its entries are merged over the bundled catalog (never
+replacing it) and cached for an hour; `modeldock sources refresh` re-fetches.
 
 See [Architecture.md](Architecture.md) for the full design contract.
 

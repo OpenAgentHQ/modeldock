@@ -31,6 +31,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   Code" section: threat model for model artifacts and plugins, what
   `execution_policy` does and does not enforce, and a concrete container recipe
   for confining the runtime itself.
+- `registry_url` is now wired into discovery. Setting it under
+  `catalog_source="auto"` merges a remote catalog ahead of every other source;
+  `catalog_source="remote"` selects it as the only source (and errors when no
+  `registry_url` is configured). The setting was previously parsed and
+  displayed but never read.
+- `RemoteRegistry` caches its fetch at `<cache_dir>/remote_catalog_cache.json`
+  with a 1-hour TTL, served cache-first so a configured URL costs no network
+  round-trip per command, and falls back to an expired cache before giving up.
+  `refresh()` (and therefore `modeldock sources refresh`) bypasses the TTL.
+- `catalog_entry_to_spec`/`load_bundled_catalog` (`adapters/registry/bundled.py`)
+  — the catalog.json entry coercion, shared instead of reached for privately.
 
 ### Changed
 
@@ -41,6 +52,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   `CatalogProviderRegistry` and making the discovery call site visible.
 - `RuntimeRegistry.detect_available` logs why a backend failed to probe instead
   of discarding the exception silently.
+- `RemoteRegistry` now merges remote entries *over* the bundled catalog rather
+  than replacing it: a remote entry wins a name collision, but no bundled
+  model is dropped, so a remote URL can only add to discovery.
+- `RemoteRegistry` is built on `CachedCatalogRegistry`, so `search`,
+  `recommend`, `by_category` and `list_all` answer from the merged index, and
+  `get`/`resolve` honour aliases and casing like every other source.
+- `CompositeRegistry.describe()` deduplicates sources by name, so a catalog
+  merged inside more than one member is listed once by `modeldock sources`.
 
 ### Fixed
 
@@ -50,6 +69,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   test asserts the file list is non-empty so it cannot silently degrade again.
 - `test_model_names_are_treated_as_data` asserted a string literal against
   itself; it now routes the hostile name through `ModelRef.parse`.
+- `RemoteRegistry.search()`/`recommend()` delegated to the bundled fallback,
+  so a model that existed only in the remote catalog could never be found —
+  the exact case the remote catalog exists for.
+- A successful remote fetch replaced the catalog instead of extending it,
+  dropping every bundled model from `list_all()`/`by_category()`.
+- `RemoteRegistry.get()` matched names exactly, ignoring aliases and casing.
+- A single malformed entry in a remote payload discarded the entire fetch.
+- `RemoteRegistry` exposed only a private `_refresh`, so `modeldock sources
+  refresh` and `CompositeRegistry.refresh()` skipped it silently.
+- `RemoteRegistry.describe()` reported the URL as its cache path, and reported
+  the bundled fallback's model count as the remote source's when the fetch had
+  failed.
+- `RemoteRegistry` fetched on every construction with no cache, putting a
+  network round-trip in front of every CLI invocation.
+- `RemoteRegistry` accepted any URL scheme (including `file://`) and buffered
+  the whole response body unbounded.
 
 ## [0.2.0] - 2026-08-28
 

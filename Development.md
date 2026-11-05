@@ -224,6 +224,19 @@ To add a model to the **bundled fallback**, edit `src/modeldock/data/catalog.jso
 ```
 
 Optional `RemoteRegistry` can refresh the catalog from a URL without a release.
+Point `registry_url` at a document in exactly the shape above (a `models` list
+of these entries) and ModelDock merges it over the bundled catalog:
+
+```toml
+# ~/.config/modeldock/config.toml
+registry_url = "https://example.com/modeldock-catalog.json"
+```
+
+Or `MODELDOCK_REGISTRY_URL=... modeldock search llama`. The fetch is cached at
+`<cache_dir>/remote_catalog_cache.json` for an hour, so only the first command
+in that window touches the network; `modeldock sources refresh` forces a
+re-fetch, and `modeldock sources` shows what the remote URL contributed.
+Setting `catalog_source = "remote"` uses it as the only source.
 
 ---
 
