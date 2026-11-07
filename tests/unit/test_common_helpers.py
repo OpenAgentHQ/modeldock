@@ -45,6 +45,7 @@ from modeldock.domain.source import SourceInfo, SourceTrust
 
 
 def test_create_client_applies_defaults_and_user_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the synchronous client uses the default options and user agent."""
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.Client", factory)
 
@@ -60,6 +61,7 @@ def test_create_client_applies_defaults_and_user_agent(monkeypatch: pytest.Monke
 
 
 def test_create_client_merges_custom_headers_and_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify custom synchronous client options override the defaults."""
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.Client", factory)
 
@@ -74,6 +76,7 @@ def test_create_client_merges_custom_headers_and_options(monkeypatch: pytest.Mon
 
 
 def test_create_async_client_applies_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the asynchronous client uses the default options and user agent."""
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.AsyncClient", factory)
 
@@ -89,6 +92,7 @@ def test_create_async_client_applies_defaults(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_create_async_client_merges_headers_and_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify custom asynchronous client options are merged with the defaults."""
     factory = Mock(return_value=object())
     monkeypatch.setattr("modeldock.common.http.httpx.AsyncClient", factory)
 
@@ -103,10 +107,12 @@ def test_create_async_client_merges_headers_and_options(monkeypatch: pytest.Monk
 
 
 def test_app_name_uses_modeldock_scope() -> None:
+    """Verify the application directory scope uses the ModelDock name."""
     assert app_name() == "modeldock"
 
 
 def test_user_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the user configuration directory is scoped to ModelDock."""
     lookup = Mock(return_value="/cfg")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_config_dir", lookup)
 
@@ -115,6 +121,7 @@ def test_user_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_user_cache_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the user cache directory is scoped to ModelDock."""
     lookup = Mock(return_value="/cache")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_cache_dir", lookup)
 
@@ -123,6 +130,7 @@ def test_user_cache_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_user_data_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the user data directory is scoped to ModelDock."""
     lookup = Mock(return_value="/data")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.user_data_dir", lookup)
 
@@ -131,6 +139,7 @@ def test_user_data_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_system_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the system configuration directory is scoped to ModelDock."""
     lookup = Mock(return_value="/etc/modeldock")
     monkeypatch.setattr("modeldock.common.platform.platformdirs.site_config_dir", lookup)
 
@@ -139,6 +148,7 @@ def test_system_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_default_cache_dir_uses_environment_override(
+    """Verify the cache directory environment override takes precedence."""
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     override = tmp_path / "custom-cache"
@@ -148,6 +158,7 @@ def test_default_cache_dir_uses_environment_override(
 
 
 def test_default_cache_dir_uses_models_subdirectory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the default cache directory uses the models subdirectory."""
     monkeypatch.delenv("MODELDOCK_CACHE_DIR", raising=False)
     monkeypatch.setattr("modeldock.common.platform.user_cache_dir", lambda: Path("/cache"))
 
@@ -155,6 +166,7 @@ def test_default_cache_dir_uses_models_subdirectory(monkeypatch: pytest.MonkeyPa
 
 
 def test_is_windows_checks_platform_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify Windows detection follows the platform name."""
     monkeypatch.setattr("modeldock.common.platform.os", SimpleNamespace(name="nt"))
     assert is_windows() is True
 
@@ -163,6 +175,7 @@ def test_is_windows_checks_platform_name(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_print_error_formats_modeldock_error_as_plain_text(
+    """Verify ModelDock errors are printed as plain text to stderr."""
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     print_error(ModelNotFoundError("missing-model"))
@@ -173,6 +186,7 @@ def test_print_error_formats_modeldock_error_as_plain_text(
 
 
 def test_print_error_emits_json_for_unknown_exception(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify unknown exceptions are serialized as JSON."""
     print_error(ValueError("bad value"), as_json=True)
 
     captured = capsys.readouterr()
@@ -192,6 +206,7 @@ def test_print_error_includes_traceback_in_debug_mode(capsys: pytest.CaptureFixt
 
 
 def test_print_warning_writes_only_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify warnings are written to stderr without stdout output."""
     print_warning("review the selected backend")
 
     captured = capsys.readouterr()
@@ -200,6 +215,7 @@ def test_print_warning_writes_only_to_stderr(capsys: pytest.CaptureFixture[str])
 
 
 def test_render_json_writes_indented_json(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify JSON rendering serializes domain objects with indentation."""
     spec = ModelSpec(
         name="llama3",
         category=Category.CHAT,
@@ -217,6 +233,7 @@ def test_render_json_writes_indented_json(capsys: pytest.CaptureFixture[str]) ->
 
 
 def test_render_models_displays_catalog_fields(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify model rendering displays the catalog fields."""
     spec = ModelSpec(
         name="llama3",
         category=Category.CHAT,
@@ -235,6 +252,7 @@ def test_render_models_displays_catalog_fields(capsys: pytest.CaptureFixture[str
 
 
 def test_render_installed_displays_backend(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify installed model rendering displays backend information."""
     render_installed([ModelRef(name="llama3", tag="8b", backend=RuntimeBackend.OLLAMA)])
 
     output = capsys.readouterr().out
@@ -244,6 +262,7 @@ def test_render_installed_displays_backend(capsys: pytest.CaptureFixture[str]) -
 
 
 def test_render_runtimes_displays_status_and_details(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify runtime rendering displays status and details."""
     statuses = [
         RuntimeStatus(
             backend=RuntimeBackend.OLLAMA,
@@ -264,6 +283,7 @@ def test_render_runtimes_displays_status_and_details(capsys: pytest.CaptureFixtu
 
 
 def test_render_sources_displays_trust_and_availability(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify source rendering displays trust and availability."""
     sources = [
         SourceInfo(
             name="local-catalog",
@@ -292,6 +312,7 @@ def test_render_sources_displays_trust_and_availability(capsys: pytest.CaptureFi
 
 
 def test_render_verify_displays_success_and_failure(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify verification rendering distinguishes successful and failed models."""
     render_verify([("llama3", True), ("qwen3", False)])
 
     output = capsys.readouterr().out
