@@ -8,9 +8,6 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import Mock
 
 from modeldock.cli.console import (
     print_error,
@@ -141,7 +138,9 @@ def test_system_config_dir_uses_modeldock_scope(monkeypatch: pytest.MonkeyPatch)
     lookup.assert_called_once_with("modeldock")
 
 
-def test_default_cache_dir_uses_environment_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_default_cache_dir_uses_environment_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     override = tmp_path / "custom-cache"
     monkeypatch.setenv("MODELDOCK_CACHE_DIR", str(override))
 
@@ -163,7 +162,9 @@ def test_is_windows_checks_platform_name(monkeypatch: pytest.MonkeyPatch) -> Non
     assert is_windows() is False
 
 
-def test_print_error_formats_modeldock_error_as_plain_text(capsys: pytest.CaptureFixture[str]) -> None:
+def test_print_error_formats_modeldock_error_as_plain_text(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     print_error(ModelNotFoundError("missing-model"))
 
     captured = capsys.readouterr()
