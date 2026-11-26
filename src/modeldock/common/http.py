@@ -22,6 +22,8 @@ def create_client(
     verify: bool = True,
 ) -> httpx.Client:
     """Create a configured synchronous httpx client."""
+    if not verify:
+        raise ValueError("TLS certificate verification cannot be disabled")
     merged = {"User-Agent": _USER_AGENT}
     if headers:
         merged.update(headers)
@@ -30,7 +32,7 @@ def create_client(
     return httpx.Client(
         timeout=timeout,
         headers=merged,
-        verify=verify,
+        verify=True,
         follow_redirects=True,
     )
 
@@ -41,13 +43,15 @@ def create_async_client(
     verify: bool = True,
 ) -> httpx.AsyncClient:
     """Create a configured asynchronous httpx client."""
+    if not verify:
+        raise ValueError("TLS certificate verification cannot be disabled")
     merged = {"User-Agent": _USER_AGENT}
     if headers:
         merged.update(headers)
     return httpx.AsyncClient(
         timeout=timeout,
         headers=merged,
-        verify=verify,
+        verify=True,
         follow_redirects=True,
     )
 
